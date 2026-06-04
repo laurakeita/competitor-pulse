@@ -69,7 +69,7 @@ export function generateMockData(domain: string): BrandData {
   const s2 = (seed * 1103515245 + 12345) & 0x7fffffff;
   const s3 = (s2 * 1103515245 + 12345) & 0x7fffffff;
 
-  const totalActiveAds = range(50, 5000, s2);
+  const mockTotal = range(50, 5000, s2);
 
   const creatives = Array.from({ length: 8 }, (_, i) => ({
     libraryId: `mock_${seed}_${i}`,
@@ -88,7 +88,10 @@ export function generateMockData(domain: string): BrandData {
   const ads: AdData = {
     domain,
     brandName,
-    totalActiveAds,
+    estimatedActiveAdsCount: mockTotal,
+    sampledAdsCount: creatives.length,
+    countSource: "mcp_graph_api",
+    countUpdatedAt: new Date().toISOString(),
     creatives,
     dataSource: "mock",
   };

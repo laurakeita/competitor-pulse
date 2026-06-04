@@ -17,7 +17,7 @@ Return ONLY valid JSON. No markdown fences, no explanation.`;
 interface RawBrandInput {
   domain: string;
   brandName: string;
-  totalActiveAds: number | null;
+  estimatedActiveAdsCount: number | null;
   adCopySamples: string[];
 }
 
@@ -68,7 +68,7 @@ export async function claudeAnalyzeAll(
   const rawInputs: RawBrandInput[] = brands.map((b) => ({
     domain: b.domain,
     brandName: b.brandName,
-    totalActiveAds: b.ads.totalActiveAds,
+    estimatedActiveAdsCount: b.ads.estimatedActiveAdsCount,
     adCopySamples: b.ads.creatives
       .map((c) => c.adCopy)
       .filter(Boolean)

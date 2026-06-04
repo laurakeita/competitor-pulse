@@ -142,7 +142,7 @@ function parseAdBlocks(text: string, brandName: string): AdBlock[] {
 }
 
 export function parseMetaAds(domain: string, brandName: string, markdown: string): AdData {
-  const totalActiveAds = parseTotalAds(markdown);
+  const parsedTotal = parseTotalAds(markdown);
   const blocks = parseAdBlocks(markdown, brandName);
 
   const creatives: AdCreative[] = blocks.map((b) => ({
@@ -161,7 +161,10 @@ export function parseMetaAds(domain: string, brandName: string, markdown: string
   return {
     domain,
     brandName,
-    totalActiveAds,
+    estimatedActiveAdsCount: parsedTotal,
+    sampledAdsCount: creatives.length,
+    countSource: parsedTotal !== null ? "mcp_graph_api" : "unavailable",
+    countUpdatedAt: parsedTotal !== null ? new Date().toISOString() : null,
     creatives,
     dataSource: creatives.length > 0 ? "firecrawl" : "mock",
   };

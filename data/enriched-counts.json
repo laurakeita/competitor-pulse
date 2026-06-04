@@ -1,0 +1,16 @@
+{
+  "15087023444": {
+    "pageId": "15087023444",
+    "brandName": "Nike",
+    "estimatedActiveAdsCount": 1975,
+    "countSource": "mcp_graph_api",
+    "countUpdatedAt": "2026-06-04T00:00:00.000Z"
+  },
+  "182162001806727": {
+    "pageId": "182162001806727",
+    "brandName": "Adidas",
+    "estimatedActiveAdsCount": 689,
+    "countSource": "mcp_graph_api",
+    "countUpdatedAt": "2026-06-04T00:00:00.000Z"
+  }
+}

@@ -14,7 +14,13 @@ export interface AdCreative {
 export interface AdData {
   domain: string;
   brandName: string;
-  totalActiveAds: number | null;
+  /** Total from Meta Graph API / MCP — null when not yet enriched */
+  estimatedActiveAdsCount: number | null;
+  /** Number of creatives actually downloaded (Apify sample) */
+  sampledAdsCount: number;
+  countSource: "mcp_graph_api" | "apify_sample" | "unavailable";
+  /** ISO timestamp of when the count was last fetched */
+  countUpdatedAt: string | null;
   creatives: AdCreative[];
   dataSource: "firecrawl" | "apify" | "mock";
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { BrandData } from "@/lib/types";
 import {
   avgRunningDays,
@@ -8,10 +9,58 @@ import {
   topLandingPages,
 } from "@/lib/ad-utils";
 
-function fmtAds(n: number | null): string {
+function fmtCount(n: number | null): string {
   if (n === null) return "–";
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
   return String(n);
+}
+
+const COUNT_SOURCE_LABELS: Record<string, string> = {
+  mcp_graph_api: "Meta Graph API estimate",
+  apify_sample: "Apify sample only",
+  unavailable: "Unavailable",
+};
+
+function ActiveAdsCell({ ads }: { ads: BrandData["ads"] }) {
+  const [showTip, setShowTip] = useState(false);
+  const hasEstimate = ads.estimatedActiveAdsCount !== null && ads.countSource === "mcp_graph_api";
+
+  return (
+    <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 text-center relative">
+      <div className="text-lg font-bold text-indigo-600">
+        {hasEstimate ? fmtCount(ads.estimatedActiveAdsCount) : "N/A"}
+      </div>
+      <div className="flex items-center justify-center gap-1 mt-0.5">
+        <span className="text-[10px] text-gray-400">Active Ads</span>
+        <button
+          onClick={() => setShowTip((v) => !v)}
+          className="text-[9px] text-gray-300 hover:text-gray-500 leading-none"
+          aria-label="Count source info"
+        >
+          ⓘ
+        </button>
+      </div>
+      {showTip && (
+        <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg p-2.5 shadow-lg text-left">
+          <p className="text-[10px] text-gray-600 leading-relaxed">
+            Active Ads count is an estimated total from Meta Ad Library API via MCP in local enrichment mode.
+            Creative analysis is based on sampled ads collected via Apify.
+          </p>
+          <p className="text-[9px] text-gray-400 mt-1.5">
+            Source: {COUNT_SOURCE_LABELS[ads.countSource] ?? ads.countSource}
+            {ads.countUpdatedAt && (
+              <> · Updated {new Date(ads.countUpdatedAt).toLocaleDateString()}</>
+            )}
+          </p>
+          {!hasEstimate && ads.sampledAdsCount > 0 && (
+            <p className="text-[9px] text-gray-400 mt-1">
+              Sampled creatives: {ads.sampledAdsCount}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface Props {
@@ -27,8 +76,7 @@ export default function BrandPulseTab({ brand }: Props) {
   const vidRatio = videoRatio(creatives);
   const landingPages = topLandingPages(creatives, 5);
 
-  const metrics = [
-    { label: "Active Ads", value: fmtAds(ads.totalActiveAds), color: "text-indigo-600" },
+  const secondaryMetrics = [
     { label: "New (20d)", value: newAds > 0 ? String(newAds) : "–", color: "text-emerald-600" },
     { label: "Avg Running", value: avgDays !== null ? `${avgDays}d` : "–", color: "text-amber-600" },
     { label: "Video Ratio", value: vidRatio !== null ? `${vidRatio}%` : "–", color: "text-sky-600" },
@@ -38,13 +86,20 @@ export default function BrandPulseTab({ brand }: Props) {
     <div className="space-y-3">
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-2">
-        {metrics.map((m) => (
+        <ActiveAdsCell ads={ads} />
+        {secondaryMetrics.map((m) => (
           <div key={m.label} className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 text-center">
             <div className={`text-lg font-bold ${m.color}`}>{m.value}</div>
             <div className="text-[10px] text-gray-400 mt-0.5">{m.label}</div>
           </div>
         ))}
       </div>
+      {/* Sampled creatives footnote — shown when no estimated count */}
+      {ads.countSource !== "mcp_graph_api" && ads.sampledAdsCount > 0 && (
+        <p className="text-[10px] text-gray-400 -mt-1">
+          Sampled creatives: {ads.sampledAdsCount} · Estimated total unavailable
+        </p>
+      )}
 
       {/* AI Summary */}
       {ai.adSummaryBullets.length > 0 && (

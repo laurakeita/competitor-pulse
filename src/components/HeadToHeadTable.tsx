@@ -17,7 +17,7 @@ interface RowDef {
 }
 
 const ROWS: RowDef[] = [
-  { label: "Active Ads", getValue: (b) => fmtNum(b.ads.totalActiveAds), getNum: (b) => b.ads.totalActiveAds, highlight: "high" },
+  { label: "Active Ads", getValue: (b) => b.ads.estimatedActiveAdsCount !== null ? fmtNum(b.ads.estimatedActiveAdsCount) : "–", getNum: (b) => b.ads.estimatedActiveAdsCount, highlight: "high" },
   { label: "New Ads (20d)", getValue: (b) => String(newAdsLast20Days(b.ads.creatives)) || "–", getNum: (b) => newAdsLast20Days(b.ads.creatives), highlight: "high" },
   { label: "Avg Running Days", getValue: (b) => { const d = avgRunningDays(b.ads.creatives); return d !== null ? `${d}d` : "–"; }, getNum: (b) => avgRunningDays(b.ads.creatives), highlight: "high" },
   { label: "Video Ratio", getValue: (b) => { const v = videoRatio(b.ads.creatives); return v !== null ? `${v}%` : "–"; }, getNum: (b) => videoRatio(b.ads.creatives), highlight: "high" },
