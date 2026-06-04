@@ -1,7 +1,7 @@
 "use client";
 
 import { useAnalysis } from "@/hooks/useAnalysis";
-import DomainInputForm from "@/components/inputs/DomainInputForm";
+import BrandUrlForm from "@/components/inputs/BrandUrlForm";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import BrandDashboard from "@/components/BrandDashboard";
 import HeadToHeadTable from "@/components/HeadToHeadTable";
@@ -9,10 +9,13 @@ import HeadToHeadTable from "@/components/HeadToHeadTable";
 import type { BrandInput } from "@/lib/types";
 
 const QUICK_STARTS: [string, BrandInput[]][] = [
-  ["Nike vs Adidas", [
-    { pageId: "15087023444", domain: "nike.com" },
-    { pageId: "182162001806727", domain: "adidas.com" },
-  ]],
+  [
+    "Estée Lauder vs Lancôme (TW)",
+    [
+      { facebookPageUrl: "https://www.facebook.com/esteelaudertw/", brandName: "Estée Lauder Taiwan" },
+      { facebookPageUrl: "https://www.facebook.com/LancomeTW/", brandName: "Lancôme Taiwan" },
+    ],
+  ],
 ];
 
 export default function HomePage() {
@@ -50,10 +53,10 @@ export default function HomePage() {
               Analyze Competitors
             </h2>
             <p className="text-sm text-gray-500">
-              Enter up to 5 Facebook Page IDs to monitor ad activity and creative trends.
+              Paste up to 5 Facebook page URLs to monitor ad activity and creative trends.
             </p>
           </div>
-          <DomainInputForm onAnalyze={(brands, cc) => analyze(brands, cc)} isLoading={isLoading} />
+          <BrandUrlForm onAnalyze={(brands, cc) => analyze(brands, cc)} isLoading={isLoading} />
 
           {state.error && (
             <div className="mt-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs">

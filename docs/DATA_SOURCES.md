@@ -21,10 +21,12 @@ Competitor Pulse draws from two distinct sources that serve different purposes. 
 
 **Input format:**
 ```
-URL: https://www.facebook.com/{pageId}/
+URL: https://www.facebook.com/{handle-or-pageId}/
 Filters: activeStatus=active, sortBy=impressions_desc, countryCode=<user-selected>
 Limit: 50 per brand
 ```
+
+The user provides a Facebook page URL (e.g. `https://www.facebook.com/LancomeTW/`). The system extracts the handle, resolves it to a numeric page ID via `data/page-id-cache.json`, and passes the original URL to Apify.
 
 **Cost:** ~$0.75 per 1,000 results → ~$0.04 per brand per scan
 

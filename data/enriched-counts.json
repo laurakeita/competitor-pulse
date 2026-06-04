@@ -1,4 +1,32 @@
 {
+  "188151501215824": {
+    "pageId": "188151501215824",
+    "brandName": "Estée Lauder Taiwan",
+    "estimatedActiveAdsCount": 28,
+    "countSource": "mcp_graph_api",
+    "countUpdatedAt": "2026-06-05T00:00:00.000Z",
+    "newAds20d": null,
+    "avgRunningDays": null,
+    "videoRatio": null,
+    "weeklyLaunches": [],
+    "currentWeekLaunches": null,
+    "fourWeekAvgLaunches": null,
+    "burstStatus": null
+  },
+  "156514087702491": {
+    "pageId": "156514087702491",
+    "brandName": "Lancôme Taiwan",
+    "estimatedActiveAdsCount": 861,
+    "countSource": "mcp_graph_api",
+    "countUpdatedAt": "2026-06-05T00:00:00.000Z",
+    "newAds20d": null,
+    "avgRunningDays": null,
+    "videoRatio": null,
+    "weeklyLaunches": [],
+    "currentWeekLaunches": null,
+    "fourWeekAvgLaunches": null,
+    "burstStatus": null
+  },
   "15087023444": {
     "pageId": "15087023444",
     "brandName": "Nike",

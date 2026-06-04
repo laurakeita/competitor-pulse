@@ -120,8 +120,8 @@ function domainToBrandName(domain: string): string {
 }
 
 export async function scrapeApifyMetaAds(
-  domain: string,
-  pageId: string,
+  brandName: string,
+  pageUrl: string,
   countryCode = "TW"
 ): Promise<AdData> {
   const token = process.env.APIFY_API_TOKEN;
@@ -129,9 +129,9 @@ export async function scrapeApifyMetaAds(
 
   const client = new ApifyClient({ token });
 
-  // facebook.com/{pageId}/ works for both numeric IDs and usernames.
-  // view_all_page_id Ads Library URLs silently fail for many pages (e.g. Adidas).
-  const adLibraryUrl = `https://www.facebook.com/${pageId}/`;
+  // Pass the full page URL — works for both numeric IDs and handles.
+  // view_all_page_id= format silently fails for many pages (e.g. Adidas).
+  const adLibraryUrl = pageUrl;
 
   const run = await client.actor(ACTOR_ID).call(
     {
@@ -152,14 +152,15 @@ export async function scrapeApifyMetaAds(
 
   const adItems = items as ApifyAdItem[];
 
-  const brandName =
-    adItems.find((i) => i.page_name)?.page_name ?? domainToBrandName(domain);
+  // Prefer the page_name returned by the actor; fall back to caller-supplied name
+  const resolvedBrandName =
+    adItems.find((i) => i.page_name)?.page_name ?? brandName;
 
   const creatives: AdCreative[] = adItems
     .filter((item) => item.ad_archive_id)
     .map((item) => ({
       libraryId: item.ad_archive_id!,
-      advertiserName: item.page_name ?? brandName,
+      advertiserName: item.page_name ?? resolvedBrandName,
       adCopy: extractAdCopy(item),
       imageUrl: extractImageUrl(item),
       adLibraryUrl: item.ad_library_url ?? `https://www.facebook.com/ads/library/?id=${item.ad_archive_id}`,
@@ -171,8 +172,8 @@ export async function scrapeApifyMetaAds(
     }));
 
   return {
-    domain,
-    brandName,
+    domain: new URL(pageUrl).hostname,
+    brandName: resolvedBrandName,
     metrics: null,
     sampledAdsCount: creatives.length,
     creatives,

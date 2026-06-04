@@ -8,7 +8,7 @@ A competitive ad monitoring tool that tracks Facebook and Instagram ad activity 
 
 Manually checking the Meta Ads Library for multiple competitors is slow and inconsistent. Competitor Pulse automates this into a single dashboard:
 
-- Enter up to 5 Facebook Page IDs
+- Paste up to 5 Facebook page URLs — no Page IDs or domain lookup required
 - Get the top 50 active ads ranked by impressions, with creative thumbnails
 - See format breakdown, messaging pillars, creative tone, and AI-generated summaries
 - Compare brands side-by-side in a head-to-head table
@@ -59,8 +59,8 @@ The `data/enriched-counts.json` file stores estimated totals fetched during deve
 
 ```bash
 npm run enrich
-# or for a single brand:
-npx tsx scripts/enrich-meta-counts.ts --pageId 15087023444 --brand Nike
+# or for a single brand (by numeric page ID):
+npx tsx scripts/enrich-meta-counts.ts --pageId 156514087702491 --brand "Lancôme Taiwan"
 ```
 
 The enrichment script calls the Meta Ads MCP server via JSON-RPC and writes results locally. The Next.js app only reads the JSON file — it never calls MCP or the Graph API at runtime.
@@ -123,7 +123,7 @@ Updates `data/enriched-counts.json` with the latest estimated total counts from 
 
 ## Quick Start
 
-Try the built-in **Nike vs Adidas** preset on the home page, or enter any Facebook Page ID manually. Find a Page ID by visiting the brand's Facebook page and checking the URL or page info section.
+Try the built-in **Estée Lauder vs Lancôme (TW)** preset on the home page, or paste any Facebook page URL. Supports full URLs (`https://www.facebook.com/LancomeTW/`), bare handles (`LancomeTW`), and numeric Page IDs. Brand name and logo are resolved automatically.
 
 ---
 

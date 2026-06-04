@@ -85,8 +85,10 @@ export interface AnalysisState {
 }
 
 export interface BrandInput {
-  pageId: string;
-  domain: string | null;
+  /** Full Facebook page URL or raw handle. e.g. "https://www.facebook.com/LancomeTW/" */
+  facebookPageUrl: string;
+  /** Optional display name override. If omitted, resolved from cache or handle. */
+  brandName?: string;
 }
 
 export interface AnalyzeRequest {

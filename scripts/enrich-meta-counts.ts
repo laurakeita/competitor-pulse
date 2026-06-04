@@ -27,10 +27,8 @@ const METRICS_PATH = path.resolve(__dirname, "../data/enriched-counts.json");
 const MCP_URL = "https://mcp.facebook.com/ads";
 
 const DEFAULT_BRANDS: Array<{ pageId: string; brandName: string }> = [
-  { pageId: "15087023444", brandName: "Nike" },
-  { pageId: "182162001806727", brandName: "Adidas" },
-  { pageId: "8119826767", brandName: "Puma" },
-  { pageId: "1421581734802579", brandName: "New Balance" },
+  { pageId: "188151501215824", brandName: "Estée Lauder Taiwan" },
+  { pageId: "156514087702491", brandName: "Lancôme Taiwan" },
 ];
 
 interface McpToolResult {

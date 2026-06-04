@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
-import type { AnalyzeRequest, AnalyzeResponse, BrandData } from "@/lib/types";
+import type { AnalyzeRequest, AnalyzeResponse } from "@/lib/types";
+import { resolveBrand } from "@/lib/resolvers/resolve-page";
 import { scrapeApifyMetaAds } from "@/lib/scrapers/apify-meta-ads";
 import { normalizeBrandData } from "@/lib/normalize";
 import { mergeMetrics } from "@/lib/enriched-counts";
@@ -15,40 +16,41 @@ export async function POST(req: NextRequest) {
 
   try {
     const body: AnalyzeRequest = await req.json();
+
+    // Resolve each brand URL → { pageUrl, pageId, brandName, handle }
     const inputs = (body.brands ?? [])
-      .map((b) => ({
-        pageId: b.pageId?.trim().replace(/\D/g, "") ?? "",
-        domain: b.domain?.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").split("/")[0] || null,
-      }))
-      .filter((b) => b.pageId.length > 0)
+      .map((b) => resolveBrand(b))
+      .filter((b): b is NonNullable<typeof b> => b !== null)
       .slice(0, 5);
 
     if (inputs.length === 0) {
-      return Response.json({ error: "No valid Page IDs provided" }, { status: 400 });
+      return Response.json({ error: "No valid Facebook page URLs provided" }, { status: 400 });
     }
 
-    // Demo mode: env flag OR no API token configured → return mock data immediately
+    // Demo mode: env flag OR no API token → return mock data
     if (DEMO_MODE || !USE_APIFY) {
-      const brands = inputs.map((b) => generateMockData(b.domain ?? b.pageId));
+      const brands = inputs.map((b) =>
+        generateMockData(b.pageId ?? b.handle, b.brandName)
+      );
       return Response.json({ brands, durationMs: Date.now() - start } satisfies AnalyzeResponse);
     }
 
     const countryCode = (body.countryCode ?? DEFAULT_COUNTRY).toUpperCase().slice(0, 2);
 
     const adResults = await Promise.allSettled(
-      inputs.map((b) =>
-        scrapeApifyMetaAds(b.domain ?? b.pageId, b.pageId, countryCode)
-      )
+      inputs.map((b) => scrapeApifyMetaAds(b.brandName, b.pageUrl, countryCode))
     );
 
-    // Enrich each ad result with stored estimated count before normalization
+    // Enrich with MCP-sourced metrics (uses pageId; skipped if handle not in cache)
     const enrichedResults = adResults.map((result, i) => {
       if (result.status !== "fulfilled") return result;
-      return { status: "fulfilled" as const, value: mergeMetrics(inputs[i].pageId, result.value) };
+      const pageId = inputs[i].pageId;
+      if (!pageId) return result;
+      return { status: "fulfilled" as const, value: mergeMetrics(pageId, result.value) };
     });
 
-    const rawBrands = inputs.map((input, i) =>
-      normalizeBrandData(input.pageId, input.domain, enrichedResults[i])
+    const rawBrands = inputs.map((resolved, i) =>
+      normalizeBrandData(resolved, enrichedResults[i])
     );
 
     let aiResults;
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
       aiResults = rawBrands.map((b) => generateMockData(b.id).ai);
     }
 
-    const brands: BrandData[] = rawBrands.map((raw, i) => ({
+    const brands = rawBrands.map((raw, i) => ({
       ...raw,
       ai: aiResults[i],
       analyzedAt: new Date().toISOString(),

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { BrandInput } from "@/lib/types";
+import { parseFacebookUrl } from "@/lib/resolvers/resolve-page";
 
 const COUNTRIES = [
   { code: "TW", label: "Taiwan (TW)" },
@@ -20,31 +21,35 @@ interface Props {
 }
 
 interface Row {
-  pageId: string;
-  domain: string;
+  facebookPageUrl: string;
+  brandName: string;
 }
 
-function cleanPageId(value: string): string {
-  return value.trim().replace(/\D/g, "");
+function isValidFacebookInput(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  // Raw numeric ID
+  if (/^\d+$/.test(trimmed)) return true;
+  // Raw handle (letters, numbers, dots, hyphens)
+  if (/^[\w.-]+$/.test(trimmed)) return true;
+  // Facebook URL
+  try {
+    const url = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
+    return url.hostname === "facebook.com" || url.hostname === "www.facebook.com";
+  } catch {
+    return false;
+  }
 }
 
-function cleanDomain(value: string): string {
-  return value.trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").split("/")[0];
-}
-
-function isValidDomain(value: string): boolean {
-  return /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z]{2,})+$/i.test(value);
-}
-
-export default function DomainInputForm({ onAnalyze, isLoading }: Props) {
+export default function BrandUrlForm({ onAnalyze, isLoading }: Props) {
   const [rows, setRows] = useState<Row[]>([
-    { pageId: "", domain: "" },
-    { pageId: "", domain: "" },
+    { facebookPageUrl: "", brandName: "" },
+    { facebookPageUrl: "", brandName: "" },
   ]);
   const [countryCode, setCountryCode] = useState("TW");
 
   const addRow = () => {
-    if (rows.length < 5) setRows([...rows, { pageId: "", domain: "" }]);
+    if (rows.length < 5) setRows([...rows, { facebookPageUrl: "", brandName: "" }]);
   };
 
   const removeRow = (i: number) => {
@@ -60,83 +65,75 @@ export default function DomainInputForm({ onAnalyze, isLoading }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const brands: BrandInput[] = rows
-      .map((r) => {
-        const pageId = cleanPageId(r.pageId);
-        const domain = cleanDomain(r.domain);
-        return {
-          pageId,
-          domain: domain && isValidDomain(domain) ? domain : null,
-        };
-      })
-      .filter((b) => b.pageId.length > 0);
+      .filter((r) => isValidFacebookInput(r.facebookPageUrl))
+      .map((r) => ({
+        facebookPageUrl: r.facebookPageUrl.trim(),
+        brandName: r.brandName.trim() || undefined,
+      }));
     if (brands.length > 0) onAnalyze(brands, countryCode);
   };
 
-  const validCount = rows.filter((r) => cleanPageId(r.pageId).length > 0).length;
-  const canSubmit = validCount > 0 && !isLoading;
+  const validRows = rows.filter((r) => isValidFacebookInput(r.facebookPageUrl));
+  const canSubmit = validRows.length > 0 && !isLoading;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {/* Column headers */}
       <div className="flex gap-2 px-0.5">
         <span className="flex-1 text-[10px] text-gray-400 font-medium uppercase tracking-wide">
-          Facebook Page ID
+          Facebook Page URL
           <span className="normal-case ml-1 text-red-400">*</span>
         </span>
-        <span className="w-44 text-[10px] text-gray-400 font-medium uppercase tracking-wide">
-          Domain
-          <span className="normal-case ml-1 text-gray-300">(logo only, optional)</span>
+        <span className="w-36 text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+          Brand Name
+          <span className="normal-case ml-1 text-gray-300">(optional)</span>
         </span>
         {rows.length > 1 && <span className="w-9" />}
       </div>
 
       <div className="space-y-2">
         {rows.map((row, i) => {
-          const pid = cleanPageId(row.pageId);
-          const dom = cleanDomain(row.domain);
-          const domHasError = dom.length > 0 && !isValidDomain(dom);
+          const isValid = isValidFacebookInput(row.facebookPageUrl);
+          const hasInput = row.facebookPageUrl.trim().length > 0;
+          const hasError = hasInput && !isValid;
 
           return (
             <div key={i} className="flex gap-2">
-              {/* Page ID — primary */}
+              {/* Facebook Page URL — primary */}
               <div className="flex-1 relative">
                 <input
                   type="text"
-                  inputMode="numeric"
-                  value={row.pageId}
-                  onChange={(e) => updateRow(i, "pageId", e.target.value)}
-                  placeholder="e.g. 15087023444"
+                  value={row.facebookPageUrl}
+                  onChange={(e) => updateRow(i, "facebookPageUrl", e.target.value)}
+                  placeholder="https://www.facebook.com/LancomeTW/"
                   disabled={isLoading}
                   className={`w-full px-3 py-2.5 rounded-lg border text-sm bg-white text-gray-900 placeholder-gray-400 outline-none transition focus:ring-1
-                    ${pid.length > 0
-                      ? "border-indigo-300 focus:border-indigo-400 focus:ring-indigo-300"
-                      : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-300"
+                    ${hasError
+                      ? "border-red-300 focus:ring-red-300"
+                      : isValid
+                        ? "border-indigo-300 focus:border-indigo-400 focus:ring-indigo-300"
+                        : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-300"
                     }
                     disabled:opacity-50`}
                 />
-                {pid.length > 0 && (
+                {isValid && (
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 text-xs">✓</span>
+                )}
+                {hasError && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 text-xs">!</span>
                 )}
               </div>
 
-              {/* Domain — secondary */}
-              <div className="w-44 relative">
+              {/* Brand name — optional override */}
+              <div className="w-36">
                 <input
                   type="text"
-                  value={row.domain}
-                  onChange={(e) => updateRow(i, "domain", e.target.value)}
-                  placeholder="brand.com"
+                  value={row.brandName}
+                  onChange={(e) => updateRow(i, "brandName", e.target.value)}
+                  placeholder="Auto-detected"
                   disabled={isLoading}
-                  className={`w-full px-3 py-2.5 rounded-lg border text-sm bg-white text-gray-900 placeholder-gray-400 outline-none transition focus:ring-1
-                    ${domHasError
-                      ? "border-red-300 focus:ring-red-300"
-                      : "border-gray-200 focus:border-gray-300 focus:ring-gray-200"
-                    }
-                    disabled:opacity-50`}
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white text-gray-900 placeholder-gray-400 outline-none transition focus:border-gray-300 focus:ring-1 focus:ring-gray-200 disabled:opacity-50"
                 />
-                {dom && !domHasError && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500 text-xs">✓</span>
-                )}
               </div>
 
               {/* Remove */}
@@ -155,6 +152,13 @@ export default function DomainInputForm({ onAnalyze, isLoading }: Props) {
         })}
       </div>
 
+      {/* Hint */}
+      <p className="text-[10px] text-gray-400 px-0.5">
+        Paste any Facebook page URL — e.g.{" "}
+        <span className="font-mono text-gray-500">facebook.com/esteelaudertw</span>.
+        Brand name and logo are detected automatically.
+      </p>
+
       {/* Country filter */}
       <div className="flex items-center gap-2">
         <label className="text-[10px] text-gray-400 font-medium uppercase tracking-wide shrink-0">
@@ -170,7 +174,7 @@ export default function DomainInputForm({ onAnalyze, isLoading }: Props) {
             <option key={c.code} value={c.code}>{c.label}</option>
           ))}
         </select>
-        <span className="text-[10px] text-gray-300">Filter Ads Library results by country</span>
+        <span className="text-[10px] text-gray-300">Filters Ads Library sample by country</span>
       </div>
 
       <div className="flex gap-2">
@@ -198,7 +202,7 @@ export default function DomainInputForm({ onAnalyze, isLoading }: Props) {
               Analyzing…
             </span>
           ) : (
-            `Analyze ${validCount > 0 ? `${validCount} Brand${validCount > 1 ? "s" : ""}` : ""}`
+            `Analyze ${validRows.length > 0 ? `${validRows.length} Brand${validRows.length > 1 ? "s" : ""}` : ""}`
           )}
         </button>
       </div>

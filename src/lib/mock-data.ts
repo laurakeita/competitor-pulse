@@ -69,25 +69,26 @@ function mockBurstStatus(ratio: number): BurstStatus {
   return "Slowing";
 }
 
-export function generateMockData(domain: string): BrandData {
-  const seed = hashDomain(domain);
-  const brandName = extractBrandName(domain);
-  const s1 = seed;
-  const s2 = (seed * 1103515245 + 12345) & 0x7fffffff;
+export function generateMockData(seed: string, overrideBrandName?: string): BrandData {
+  const domain = seed;
+  const hashSeed = hashDomain(seed);
+  const brandName = overrideBrandName ?? extractBrandName(seed);
+  const s1 = hashSeed;
+  const s2 = (hashSeed * 1103515245 + 12345) & 0x7fffffff;
   const s3 = (s2 * 1103515245 + 12345) & 0x7fffffff;
 
-  const mockTotal = range(50, 5000, s2);
+  const mockTotal = range(50, 5000, hashSeed);
 
   const creatives = Array.from({ length: 8 }, (_, i) => ({
     libraryId: `mock_${seed}_${i}`,
     advertiserName: brandName,
-    adCopy: pick(AD_COPY_SAMPLES, seed + i),
+    adCopy: pick(AD_COPY_SAMPLES, hashSeed + i),
     imageUrl: null,
-    startDate: new Date(Date.now() - range(7, 120, seed + i) * 86400000)
+    startDate: new Date(Date.now() - range(7, 120, hashSeed + i) * 86400000)
       .toISOString()
       .split("T")[0],
     landingPage: `https://${domain}/offer-${i + 1}`,
-    format: pick(FORMATS, seed + i * 3),
+    format: pick(FORMATS, hashSeed + i * 3),
     platforms: ["facebook", "instagram"],
     dataSource: "mock" as const,
   }));
@@ -99,7 +100,7 @@ export function generateMockData(domain: string): BrandData {
     return {
       label: `${date.toLocaleString("en", { month: "short" })} ${date.getDate()}`,
       weekStart: date.toISOString().split("T")[0],
-      count: range(2, 14, seed + w * 7),
+      count: range(2, 14, hashSeed + w * 7),
     };
   });
 
@@ -115,9 +116,9 @@ export function generateMockData(domain: string): BrandData {
     estimatedActiveAdsCount: mockTotal,
     countSource: "mcp_graph_api",
     countUpdatedAt: new Date().toISOString(),
-    newAds20d: range(3, 16, seed + 1),
-    avgRunningDays: range(14, 60, seed + 2),
-    videoRatio: range(25, 70, seed + 3),
+    newAds20d: range(3, 16, hashSeed + 1),
+    avgRunningDays: range(14, 60, hashSeed + 2),
+    videoRatio: range(25, 70, hashSeed + 3),
     weeklyLaunches,
     currentWeekLaunches,
     fourWeekAvgLaunches,
@@ -133,9 +134,9 @@ export function generateMockData(domain: string): BrandData {
     dataSource: "mock",
   };
 
-  const sentimentCount = 2 + (seed % 2);
+  const sentimentCount = 2 + (hashSeed % 2);
   const adSentimentTags = Array.from({ length: sentimentCount }, (_, i) =>
-    pick(SENTIMENT_TAG_POOL, seed + i * 37)
+    pick(SENTIMENT_TAG_POOL, hashSeed + i * 37)
   );
 
   const ai: AiAnalysis = {
