@@ -30,7 +30,6 @@ function CreativeRow({ creative }: { creative: AdCreative }) {
       rel="noopener noreferrer"
       className="flex gap-3 p-2.5 rounded-lg border border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 transition group"
     >
-      {/* Thumbnail — shown when imageUrl is available */}
       {creative.imageUrl ? (
         <div className="shrink-0 w-14 h-14 rounded-md overflow-hidden bg-gray-100 relative border border-gray-200">
           <Image
@@ -42,7 +41,6 @@ function CreativeRow({ creative }: { creative: AdCreative }) {
           />
         </div>
       ) : (
-        /* Running days fallback when no image */
         <div className="shrink-0 w-10 text-center pt-1">
           <div className="text-sm font-bold text-gray-800">{days !== null ? days : "–"}</div>
           <div className="text-[9px] text-gray-400">days</div>
@@ -50,7 +48,6 @@ function CreativeRow({ creative }: { creative: AdCreative }) {
       )}
 
       <div className="flex-1 min-w-0 space-y-1">
-        {/* Show running days inline when thumbnail is present */}
         {creative.imageUrl && days !== null && (
           <div className="flex items-center gap-1">
             <span className="text-[10px] text-gray-400">{days}d running</span>
@@ -62,7 +59,7 @@ function CreativeRow({ creative }: { creative: AdCreative }) {
         <div className="flex items-center gap-1.5 flex-wrap">
           {creative.startDate && (
             <span className="text-[10px] text-gray-400">
-              <span className="text-gray-300">Start date</span> {creative.startDate}
+              <span className="text-gray-300">Start</span> {creative.startDate}
             </span>
           )}
           <span className={`text-[9px] px-1.5 py-0.5 rounded border ${FORMAT_COLORS[creative.format]}`}>
@@ -91,6 +88,62 @@ function CreativeRow({ creative }: { creative: AdCreative }) {
         <span className="shrink-0 text-[10px] text-gray-300 group-hover:text-gray-500 transition mt-0.5">↗</span>
       )}
     </a>
+  );
+}
+
+function AdLifespanGantt({ creatives }: { creatives: AdCreative[] }) {
+  if (creatives.length === 0) {
+    return <p className="text-xs text-gray-400 italic text-center py-4">No timeline data</p>;
+  }
+
+  const withDays = creatives
+    .map((c) => ({ ...c, days: runningDays(c.startDate) }))
+    .filter((c): c is typeof c & { days: number } => c.days !== null)
+    .sort((a, b) => b.days - a.days)
+    .slice(0, 30);
+
+  if (withDays.length === 0) {
+    return <p className="text-xs text-gray-400 italic text-center py-4">No date data available</p>;
+  }
+
+  const maxDays = withDays[0].days;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-[9px] text-gray-400 px-1 mb-1">
+        <span>← Today</span>
+        <span>{maxDays}d ago →</span>
+      </div>
+      {withDays.map((c, idx) => {
+        const pct = maxDays > 0 ? (c.days / maxDays) * 100 : 100;
+        const isNew = c.days <= 7;
+        return (
+          <div key={c.libraryId} className="flex items-center gap-2">
+            <span className="text-[9px] text-gray-400 w-4 text-right shrink-0">{idx + 1}</span>
+            <div
+              className="flex-1 h-2.5 rounded bg-gray-100 overflow-hidden relative"
+              title={`${c.adCopy?.slice(0, 60) || "No copy"} (${c.days}d)`}
+            >
+              <div
+                className={`absolute right-0 h-full rounded transition-all ${
+                  isNew ? "bg-emerald-300" : c.days > 30 ? "bg-indigo-400" : "bg-indigo-200"
+                }`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className="text-[9px] text-gray-400 w-8 text-right shrink-0">{c.days}d</span>
+          </div>
+        );
+      })}
+      <div className="flex gap-3 pt-1">
+        <span className="flex items-center gap-1 text-[9px] text-gray-400">
+          <span className="inline-block w-3 h-2 rounded bg-emerald-300" /> New (≤7d)
+        </span>
+        <span className="flex items-center gap-1 text-[9px] text-gray-400">
+          <span className="inline-block w-3 h-2 rounded bg-indigo-400" /> Running 30d+
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -127,7 +180,7 @@ export default function CreativeMomentumTab({ brand }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Summary stats */}
+      {/* Sample stats */}
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 text-center">
           <div className="text-lg font-bold text-emerald-600">{newLast20.length}</div>
@@ -135,7 +188,7 @@ export default function CreativeMomentumTab({ brand }: Props) {
         </div>
         <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 text-center">
           <div className="text-lg font-bold text-gray-800">{creatives.length}</div>
-          <div className="text-[10px] text-gray-400">Tracked Ads</div>
+          <div className="text-[10px] text-gray-400">Sample Size</div>
         </div>
         <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 text-center">
           <div className="text-lg font-bold text-rose-500">{duplicates}</div>
@@ -168,9 +221,21 @@ export default function CreativeMomentumTab({ brand }: Props) {
         </div>
       )}
 
-      {/* Ad survival ranking */}
+      {/* Ad Lifespan Gantt */}
+      <div className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">Ad Lifespan (top 30)</p>
+          <span className="text-[9px] text-gray-300 border border-gray-100 rounded px-1.5 py-0.5">Apify</span>
+        </div>
+        <AdLifespanGantt creatives={creatives} />
+      </div>
+
+      {/* Ad Survival Ranking */}
       <div className="space-y-1.5">
-        <p className="text-[10px] text-gray-400 uppercase tracking-wider">Ad Survival Ranking</p>
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">Ad Survival Ranking</p>
+          <span className="text-[9px] text-gray-300 border border-gray-100 rounded px-1.5 py-0.5">Apify</span>
+        </div>
         <div className="space-y-1.5">
           {sorted.slice(0, 15).map((c) => (
             <CreativeRow key={c.libraryId} creative={c} />

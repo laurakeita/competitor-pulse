@@ -10,7 +10,7 @@ function extractBrandName(domain: string): string {
 }
 
 function isUsableAds(a: AdData): boolean {
-  return a.sampledAdsCount > 0 || a.estimatedActiveAdsCount !== null;
+  return a.sampledAdsCount > 0 || (a.metrics?.estimatedActiveAdsCount ?? null) !== null;
 }
 
 export function normalizeBrandData(

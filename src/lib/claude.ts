@@ -68,7 +68,7 @@ export async function claudeAnalyzeAll(
   const rawInputs: RawBrandInput[] = brands.map((b) => ({
     domain: b.domain,
     brandName: b.brandName,
-    estimatedActiveAdsCount: b.ads.estimatedActiveAdsCount,
+    estimatedActiveAdsCount: b.ads.metrics?.estimatedActiveAdsCount ?? null,
     adCopySamples: b.ads.creatives
       .map((c) => c.adCopy)
       .filter(Boolean)

@@ -1,4 +1,4 @@
-import type { BrandData, AdData, AiAnalysis } from "./types";
+import type { BrandData, AdData, AiAnalysis, BrandMetrics, WeeklyLaunchData, BurstStatus } from "./types";
 
 function hashDomain(domain: string): number {
   let h = 0;
@@ -62,6 +62,13 @@ const AD_COPY_SAMPLES = [
 
 const FORMATS = ["image", "video", "carousel", "unknown"] as const;
 
+function mockBurstStatus(ratio: number): BurstStatus {
+  if (ratio >= 2) return "Surge";
+  if (ratio >= 1.3) return "Accelerating";
+  if (ratio >= 0.7) return "Steady";
+  return "Slowing";
+}
+
 export function generateMockData(domain: string): BrandData {
   const seed = hashDomain(domain);
   const brandName = extractBrandName(domain);
@@ -85,13 +92,43 @@ export function generateMockData(domain: string): BrandData {
     dataSource: "mock" as const,
   }));
 
+  // Generate 8 weeks of launch data with a plausible trend
+  const weeklyLaunches: WeeklyLaunchData[] = Array.from({ length: 8 }, (_, w) => {
+    const daysAgo = (7 - w) * 7;
+    const date = new Date(Date.now() - daysAgo * 86400000);
+    return {
+      label: `${date.toLocaleString("en", { month: "short" })} ${date.getDate()}`,
+      weekStart: date.toISOString().split("T")[0],
+      count: range(2, 14, seed + w * 7),
+    };
+  });
+
+  const currentWeekLaunches = weeklyLaunches[weeklyLaunches.length - 1].count;
+  const prevFour = weeklyLaunches.slice(-5, -1);
+  const fourWeekAvgLaunches = Math.round(
+    prevFour.reduce((a, b) => a + b.count, 0) / 4
+  );
+  const burstRatio = fourWeekAvgLaunches > 0 ? currentWeekLaunches / fourWeekAvgLaunches : 1;
+  const burstStatus = mockBurstStatus(burstRatio);
+
+  const metrics: BrandMetrics = {
+    estimatedActiveAdsCount: mockTotal,
+    countSource: "mcp_graph_api",
+    countUpdatedAt: new Date().toISOString(),
+    newAds20d: range(3, 16, seed + 1),
+    avgRunningDays: range(14, 60, seed + 2),
+    videoRatio: range(25, 70, seed + 3),
+    weeklyLaunches,
+    currentWeekLaunches,
+    fourWeekAvgLaunches,
+    burstStatus,
+  };
+
   const ads: AdData = {
     domain,
     brandName,
-    estimatedActiveAdsCount: mockTotal,
+    metrics,
     sampledAdsCount: creatives.length,
-    countSource: "mcp_graph_api",
-    countUpdatedAt: new Date().toISOString(),
     creatives,
     dataSource: "mock",
   };

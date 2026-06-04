@@ -1,5 +1,4 @@
 import type { BrandData } from "@/lib/types";
-import { avgRunningDays, newAdsLast20Days, videoRatio } from "@/lib/ad-utils";
 import React from "react";
 
 function fmtNum(n: number | null): string {
@@ -17,10 +16,10 @@ interface RowDef {
 }
 
 const ROWS: RowDef[] = [
-  { label: "Active Ads", getValue: (b) => b.ads.estimatedActiveAdsCount !== null ? fmtNum(b.ads.estimatedActiveAdsCount) : "–", getNum: (b) => b.ads.estimatedActiveAdsCount, highlight: "high" },
-  { label: "New Ads (20d)", getValue: (b) => String(newAdsLast20Days(b.ads.creatives)) || "–", getNum: (b) => newAdsLast20Days(b.ads.creatives), highlight: "high" },
-  { label: "Avg Running Days", getValue: (b) => { const d = avgRunningDays(b.ads.creatives); return d !== null ? `${d}d` : "–"; }, getNum: (b) => avgRunningDays(b.ads.creatives), highlight: "high" },
-  { label: "Video Ratio", getValue: (b) => { const v = videoRatio(b.ads.creatives); return v !== null ? `${v}%` : "–"; }, getNum: (b) => videoRatio(b.ads.creatives), highlight: "high" },
+  { label: "Active Ads", getValue: (b) => fmtNum(b.ads.metrics?.estimatedActiveAdsCount ?? null), getNum: (b) => b.ads.metrics?.estimatedActiveAdsCount ?? null, highlight: "high" },
+  { label: "New Ads (20d)", getValue: (b) => fmtNum(b.ads.metrics?.newAds20d ?? null), getNum: (b) => b.ads.metrics?.newAds20d ?? null, highlight: "high" },
+  { label: "Avg Running Days", getValue: (b) => { const d = b.ads.metrics?.avgRunningDays ?? null; return d !== null ? `${d}d` : "–"; }, getNum: (b) => b.ads.metrics?.avgRunningDays ?? null, highlight: "high" },
+  { label: "Video Ratio", getValue: (b) => { const v = b.ads.metrics?.videoRatio ?? null; return v !== null ? `${v}%` : "–"; }, getNum: (b) => b.ads.metrics?.videoRatio ?? null, highlight: "high" },
   { label: "Creative Tone", getValue: (b) => b.ai.adSentimentTags.slice(0, 2).join(", ") || "–" },
 ];
 

@@ -173,10 +173,8 @@ export async function scrapeApifyMetaAds(
   return {
     domain,
     brandName,
-    estimatedActiveAdsCount: null,
+    metrics: null,
     sampledAdsCount: creatives.length,
-    countSource: "apify_sample" as const,
-    countUpdatedAt: null,
     creatives,
     dataSource: "apify",
   };

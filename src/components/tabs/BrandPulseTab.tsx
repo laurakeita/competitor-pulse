@@ -1,13 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { BrandData } from "@/lib/types";
-import {
-  avgRunningDays,
-  newAdsLast20Days,
-  videoRatio,
-  topLandingPages,
-} from "@/lib/ad-utils";
+import type { BrandData, BrandMetrics } from "@/lib/types";
+import { topLandingPages } from "@/lib/ad-utils";
 
 function fmtCount(n: number | null): string {
   if (n === null) return "–";
@@ -15,23 +10,33 @@ function fmtCount(n: number | null): string {
   return String(n);
 }
 
-const COUNT_SOURCE_LABELS: Record<string, string> = {
+const SOURCE_LABELS: Record<string, string> = {
   mcp_graph_api: "Meta Graph API",
   apify_sample: "Apify sample",
   unavailable: "Unavailable",
 };
 
-const COUNT_SOURCE_COLORS: Record<string, string> = {
+const SOURCE_COLORS: Record<string, string> = {
   mcp_graph_api: "text-emerald-600 bg-emerald-50 border-emerald-200",
   apify_sample: "text-amber-600 bg-amber-50 border-amber-200",
   unavailable: "text-gray-400 bg-gray-50 border-gray-200",
 };
 
-function AdCountPanel({ ads }: { ads: BrandData["ads"] }) {
+function AdInventoryPanel({
+  metrics,
+  sampledAdsCount,
+}: {
+  metrics: BrandMetrics | null;
+  sampledAdsCount: number;
+}) {
   const [showTip, setShowTip] = useState(false);
-  const hasEstimate = ads.estimatedActiveAdsCount !== null && ads.countSource === "mcp_graph_api";
-  const sourceBadge = COUNT_SOURCE_LABELS[ads.countSource] ?? ads.countSource;
-  const sourceBadgeColor = COUNT_SOURCE_COLORS[ads.countSource] ?? COUNT_SOURCE_COLORS.unavailable;
+  const hasEstimate =
+    metrics !== null &&
+    metrics.estimatedActiveAdsCount !== null &&
+    metrics.countSource === "mcp_graph_api";
+  const source = metrics?.countSource ?? "unavailable";
+  const sourceBadge = SOURCE_LABELS[source] ?? source;
+  const sourceBadgeColor = SOURCE_COLORS[source] ?? SOURCE_COLORS.unavailable;
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-2.5">
@@ -47,22 +52,18 @@ function AdCountPanel({ ads }: { ads: BrandData["ads"] }) {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        {/* Active Ads Estimate */}
         <div className="rounded-md bg-gray-50 border border-gray-100 p-2 text-center">
           <div className="text-xl font-bold text-indigo-600">
-            {hasEstimate ? fmtCount(ads.estimatedActiveAdsCount) : "—"}
+            {hasEstimate ? fmtCount(metrics!.estimatedActiveAdsCount) : "—"}
           </div>
           <div className="text-[10px] text-gray-400 mt-0.5">Active Ads Estimate</div>
         </div>
-
-        {/* Sampled Creatives */}
         <div className="rounded-md bg-gray-50 border border-gray-100 p-2 text-center">
-          <div className="text-xl font-bold text-gray-700">{ads.sampledAdsCount}</div>
+          <div className="text-xl font-bold text-gray-700">{sampledAdsCount}</div>
           <div className="text-[10px] text-gray-400 mt-0.5">Sampled Creatives</div>
         </div>
       </div>
 
-      {/* Count Source + Last Updated */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1">
           <span className="text-[9px] text-gray-400">Count Source</span>
@@ -70,33 +71,34 @@ function AdCountPanel({ ads }: { ads: BrandData["ads"] }) {
             {sourceBadge}
           </span>
         </div>
-        {ads.countUpdatedAt && (
+        {metrics?.countUpdatedAt && (
           <>
             <span className="text-gray-200">·</span>
             <span className="text-[9px] text-gray-400">
-              Last Updated{" "}
+              Updated{" "}
               <span className="text-gray-500">
-                {new Date(ads.countUpdatedAt).toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" })}
+                {new Date(metrics.countUpdatedAt).toLocaleDateString("en", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
               </span>
             </span>
           </>
         )}
       </div>
 
-      {/* Tooltip */}
       {showTip && (
         <div className="rounded-md bg-indigo-50 border border-indigo-100 p-2.5 space-y-1.5">
           <p className="text-[10px] text-indigo-700 font-medium">About this data</p>
           <p className="text-[10px] text-indigo-600 leading-relaxed">
-            <strong>Active Ads Estimate</strong> is the total active ad count from Meta Ad Library API,
-            fetched via MCP enrichment in local development mode. It reflects the true library total.
+            <strong>Active Ads Estimate</strong> is the true library total from Meta Graph API, fetched via MCP and stored at dev-time. It is never inferred from sample size.
           </p>
           <p className="text-[10px] text-indigo-600 leading-relaxed">
-            <strong>Sampled Creatives</strong> are the top-{ads.sampledAdsCount} ads by impression rank,
-            collected via Apify and used for all creative analysis (format, copy, landing pages, AI summary).
+            <strong>Sampled Creatives</strong> are the top-{sampledAdsCount} ads by impression rank collected via Apify — used for all creative analysis in the Creative Momentum tab.
           </p>
-          <p className="text-[9px] text-indigo-400 mt-0.5">
-            Creative analysis is based on sampled ads only — not the full library.
+          <p className="text-[9px] text-indigo-400">
+            All KPIs on this tab (New Ads, Avg Running, Video Ratio) are derived from the MCP recency sample, not the Apify impression sample.
           </p>
         </div>
       )}
@@ -110,25 +112,33 @@ interface Props {
 
 export default function BrandPulseTab({ brand }: Props) {
   const { ads, ai } = brand;
-  const creatives = ads.creatives;
-
-  const avgDays = avgRunningDays(creatives);
-  const newAds = newAdsLast20Days(creatives);
-  const vidRatio = videoRatio(creatives);
-  const landingPages = topLandingPages(creatives, 5);
+  const { metrics } = ads;
 
   const performanceMetrics = [
-    { label: "New (20d)", value: newAds > 0 ? String(newAds) : "–", color: "text-emerald-600" },
-    { label: "Avg Running", value: avgDays !== null ? `${avgDays}d` : "–", color: "text-amber-600" },
-    { label: "Video Ratio", value: vidRatio !== null ? `${vidRatio}%` : "–", color: "text-sky-600" },
+    {
+      label: "New (20d)",
+      value: fmtCount(metrics?.newAds20d ?? null),
+      color: "text-emerald-600",
+    },
+    {
+      label: "Avg Running",
+      value: metrics?.avgRunningDays != null ? `${metrics.avgRunningDays}d` : "–",
+      color: "text-amber-600",
+    },
+    {
+      label: "Video Ratio",
+      value: metrics?.videoRatio != null ? `${metrics.videoRatio}%` : "–",
+      color: "text-sky-600",
+    },
   ];
+
+  const landingPages = topLandingPages(ads.creatives, 5);
 
   return (
     <div className="space-y-3">
-      {/* Ad inventory panel */}
-      <AdCountPanel ads={ads} />
+      <AdInventoryPanel metrics={metrics} sampledAdsCount={ads.sampledAdsCount} />
 
-      {/* Performance KPIs */}
+      {/* KPIs from MCP recency sample */}
       <div className="grid grid-cols-3 gap-2">
         {performanceMetrics.map((m) => (
           <div key={m.label} className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 text-center">
@@ -137,6 +147,12 @@ export default function BrandPulseTab({ brand }: Props) {
           </div>
         ))}
       </div>
+
+      {!metrics && (
+        <p className="text-[10px] text-amber-600 text-center py-1">
+          KPIs unavailable — run <code className="font-mono">npm run enrich</code> to populate MCP metrics
+        </p>
+      )}
 
       {/* AI Summary */}
       {ai.adSummaryBullets.length > 0 && (
@@ -183,7 +199,7 @@ export default function BrandPulseTab({ brand }: Props) {
         )}
       </div>
 
-      {/* Top landing pages */}
+      {/* Top landing pages from Apify sample */}
       {landingPages.length > 0 && (
         <div className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-1.5">
           <p className="text-[10px] text-gray-400 uppercase tracking-wider">Top Landing Pages</p>

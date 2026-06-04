@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import type { AnalyzeRequest, AnalyzeResponse, BrandData } from "@/lib/types";
 import { scrapeApifyMetaAds } from "@/lib/scrapers/apify-meta-ads";
 import { normalizeBrandData } from "@/lib/normalize";
-import { mergeEnrichedCount } from "@/lib/enriched-counts";
+import { mergeMetrics } from "@/lib/enriched-counts";
 import { claudeAnalyzeAll } from "@/lib/claude";
 import { generateMockData } from "@/lib/mock-data";
 
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     // Enrich each ad result with stored estimated count before normalization
     const enrichedResults = adResults.map((result, i) => {
       if (result.status !== "fulfilled") return result;
-      return { status: "fulfilled" as const, value: mergeEnrichedCount(inputs[i].pageId, result.value) };
+      return { status: "fulfilled" as const, value: mergeMetrics(inputs[i].pageId, result.value) };
     });
 
     const rawBrands = inputs.map((input, i) =>
