@@ -129,7 +129,7 @@ Try the built-in **Nike vs Adidas** preset on the home page, or enter any Facebo
 
 ## Screenshots
 
-_Add screenshots here_
+_Screenshots live in [`public/screenshots/`](public/screenshots/). Add `.png` files there and reference them here._
 
 ---
 
@@ -142,5 +142,14 @@ This project demonstrates:
 - **Graceful degradation** — auto demo mode, AI fallback to mock, no crashes on missing keys
 - **TypeScript discipline** — strict mode throughout, no `any`, full interface coverage
 - **Portfolio-ready UX** — works without credentials, meaningful mock data, clear data provenance labels
+
+---
+
+## Docs
+
+- [Data Sources](docs/DATA_SOURCES.md) — how Apify sampling and MCP enrichment work
+- [Limitations](docs/LIMITATIONS.md) — what `sampledAdsCount` does and does not mean
+
+---
 
 Built by [Laura Keita](https://github.com/laurakeita) · Growth Marketing & Strategy Operations
