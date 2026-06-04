@@ -63,6 +63,8 @@ export interface BrandInput {
 
 export interface AnalyzeRequest {
   brands: BrandInput[];
+  /** ISO-2 country code for Ads Library filtering. Defaults to "TW". */
+  countryCode?: string;
 }
 
 export interface AnalyzeResponse {

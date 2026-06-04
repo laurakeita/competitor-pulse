@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import type { AnalyzeRequest, AnalyzeResponse, BrandData } from "@/lib/types";
-import { scrapeMetaAds } from "@/lib/scrapers/meta-ads";
 import { scrapeApifyMetaAds } from "@/lib/scrapers/apify-meta-ads";
 import { normalizeBrandData } from "@/lib/normalize";
 import { mergeEnrichedCount } from "@/lib/enriched-counts";
@@ -9,6 +8,7 @@ import { generateMockData } from "@/lib/mock-data";
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 const USE_APIFY = Boolean(process.env.APIFY_API_TOKEN);
+const DEFAULT_COUNTRY = "TW";
 
 export async function POST(req: NextRequest) {
   const start = Date.now();
@@ -27,16 +27,17 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "No valid Page IDs provided" }, { status: 400 });
     }
 
-    if (DEMO_MODE) {
+    // Demo mode: env flag OR no API token configured → return mock data immediately
+    if (DEMO_MODE || !USE_APIFY) {
       const brands = inputs.map((b) => generateMockData(b.domain ?? b.pageId));
       return Response.json({ brands, durationMs: Date.now() - start } satisfies AnalyzeResponse);
     }
 
+    const countryCode = (body.countryCode ?? DEFAULT_COUNTRY).toUpperCase().slice(0, 2);
+
     const adResults = await Promise.allSettled(
       inputs.map((b) =>
-        USE_APIFY
-          ? scrapeApifyMetaAds(b.domain ?? b.pageId, b.pageId)
-          : scrapeMetaAds(b.domain ?? b.pageId, b.pageId)
+        scrapeApifyMetaAds(b.domain ?? b.pageId, b.pageId, countryCode)
       )
     );
 

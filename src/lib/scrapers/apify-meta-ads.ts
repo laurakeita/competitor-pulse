@@ -121,7 +121,8 @@ function domainToBrandName(domain: string): string {
 
 export async function scrapeApifyMetaAds(
   domain: string,
-  pageId: string
+  pageId: string,
+  countryCode = "TW"
 ): Promise<AdData> {
   const token = process.env.APIFY_API_TOKEN;
   if (!token) throw new Error("APIFY_API_TOKEN not set");
@@ -135,10 +136,10 @@ export async function scrapeApifyMetaAds(
   const run = await client.actor(ACTOR_ID).call(
     {
       urls: [{ url: adLibraryUrl }],
-      limitPerSource: 200,
+      limitPerSource: 50,
       scrapePageAds: {
         activeStatus: "active",
-        countryCode: "US",
+        countryCode,
         sortBy: "impressions_desc",
       },
     },
@@ -147,7 +148,7 @@ export async function scrapeApifyMetaAds(
 
   const { items } = await client
     .dataset(run.defaultDatasetId)
-    .listItems({ limit: 200 });
+    .listItems({ limit: 50 });
 
   const adItems = items as ApifyAdItem[];
 

@@ -3,8 +3,19 @@
 import { useState } from "react";
 import type { BrandInput } from "@/lib/types";
 
+const COUNTRIES = [
+  { code: "TW", label: "Taiwan (TW)" },
+  { code: "US", label: "United States (US)" },
+  { code: "GB", label: "United Kingdom (GB)" },
+  { code: "JP", label: "Japan (JP)" },
+  { code: "SG", label: "Singapore (SG)" },
+  { code: "DE", label: "Germany (DE)" },
+  { code: "FR", label: "France (FR)" },
+  { code: "AU", label: "Australia (AU)" },
+] as const;
+
 interface Props {
-  onAnalyze: (brands: BrandInput[]) => void;
+  onAnalyze: (brands: BrandInput[], countryCode: string) => void;
   isLoading: boolean;
 }
 
@@ -30,6 +41,7 @@ export default function DomainInputForm({ onAnalyze, isLoading }: Props) {
     { pageId: "", domain: "" },
     { pageId: "", domain: "" },
   ]);
+  const [countryCode, setCountryCode] = useState("TW");
 
   const addRow = () => {
     if (rows.length < 5) setRows([...rows, { pageId: "", domain: "" }]);
@@ -57,7 +69,7 @@ export default function DomainInputForm({ onAnalyze, isLoading }: Props) {
         };
       })
       .filter((b) => b.pageId.length > 0);
-    if (brands.length > 0) onAnalyze(brands);
+    if (brands.length > 0) onAnalyze(brands, countryCode);
   };
 
   const validCount = rows.filter((r) => cleanPageId(r.pageId).length > 0).length;
@@ -141,6 +153,24 @@ export default function DomainInputForm({ onAnalyze, isLoading }: Props) {
             </div>
           );
         })}
+      </div>
+
+      {/* Country filter */}
+      <div className="flex items-center gap-2">
+        <label className="text-[10px] text-gray-400 font-medium uppercase tracking-wide shrink-0">
+          Ad Country
+        </label>
+        <select
+          value={countryCode}
+          onChange={(e) => setCountryCode(e.target.value)}
+          disabled={isLoading}
+          className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-700 bg-white outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300 disabled:opacity-50"
+        >
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>{c.label}</option>
+          ))}
+        </select>
+        <span className="text-[10px] text-gray-300">Filter Ads Library results by country</span>
       </div>
 
       <div className="flex gap-2">

@@ -16,47 +16,88 @@ function fmtCount(n: number | null): string {
 }
 
 const COUNT_SOURCE_LABELS: Record<string, string> = {
-  mcp_graph_api: "Meta Graph API estimate",
-  apify_sample: "Apify sample only",
+  mcp_graph_api: "Meta Graph API",
+  apify_sample: "Apify sample",
   unavailable: "Unavailable",
 };
 
-function ActiveAdsCell({ ads }: { ads: BrandData["ads"] }) {
+const COUNT_SOURCE_COLORS: Record<string, string> = {
+  mcp_graph_api: "text-emerald-600 bg-emerald-50 border-emerald-200",
+  apify_sample: "text-amber-600 bg-amber-50 border-amber-200",
+  unavailable: "text-gray-400 bg-gray-50 border-gray-200",
+};
+
+function AdCountPanel({ ads }: { ads: BrandData["ads"] }) {
   const [showTip, setShowTip] = useState(false);
   const hasEstimate = ads.estimatedActiveAdsCount !== null && ads.countSource === "mcp_graph_api";
+  const sourceBadge = COUNT_SOURCE_LABELS[ads.countSource] ?? ads.countSource;
+  const sourceBadgeColor = COUNT_SOURCE_COLORS[ads.countSource] ?? COUNT_SOURCE_COLORS.unavailable;
 
   return (
-    <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 text-center relative">
-      <div className="text-lg font-bold text-indigo-600">
-        {hasEstimate ? fmtCount(ads.estimatedActiveAdsCount) : "N/A"}
-      </div>
-      <div className="flex items-center justify-center gap-1 mt-0.5">
-        <span className="text-[10px] text-gray-400">Active Ads</span>
+    <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Ad Inventory</span>
         <button
           onClick={() => setShowTip((v) => !v)}
-          className="text-[9px] text-gray-300 hover:text-gray-500 leading-none"
-          aria-label="Count source info"
+          className="text-[11px] text-gray-300 hover:text-indigo-400 transition"
+          aria-label="Data source info"
         >
           ⓘ
         </button>
       </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        {/* Active Ads Estimate */}
+        <div className="rounded-md bg-gray-50 border border-gray-100 p-2 text-center">
+          <div className="text-xl font-bold text-indigo-600">
+            {hasEstimate ? fmtCount(ads.estimatedActiveAdsCount) : "—"}
+          </div>
+          <div className="text-[10px] text-gray-400 mt-0.5">Active Ads Estimate</div>
+        </div>
+
+        {/* Sampled Creatives */}
+        <div className="rounded-md bg-gray-50 border border-gray-100 p-2 text-center">
+          <div className="text-xl font-bold text-gray-700">{ads.sampledAdsCount}</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">Sampled Creatives</div>
+        </div>
+      </div>
+
+      {/* Count Source + Last Updated */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1">
+          <span className="text-[9px] text-gray-400">Count Source</span>
+          <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${sourceBadgeColor}`}>
+            {sourceBadge}
+          </span>
+        </div>
+        {ads.countUpdatedAt && (
+          <>
+            <span className="text-gray-200">·</span>
+            <span className="text-[9px] text-gray-400">
+              Last Updated{" "}
+              <span className="text-gray-500">
+                {new Date(ads.countUpdatedAt).toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" })}
+              </span>
+            </span>
+          </>
+        )}
+      </div>
+
+      {/* Tooltip */}
       {showTip && (
-        <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg p-2.5 shadow-lg text-left">
-          <p className="text-[10px] text-gray-600 leading-relaxed">
-            Active Ads count is an estimated total from Meta Ad Library API via MCP in local enrichment mode.
-            Creative analysis is based on sampled ads collected via Apify.
+        <div className="rounded-md bg-indigo-50 border border-indigo-100 p-2.5 space-y-1.5">
+          <p className="text-[10px] text-indigo-700 font-medium">About this data</p>
+          <p className="text-[10px] text-indigo-600 leading-relaxed">
+            <strong>Active Ads Estimate</strong> is the total active ad count from Meta Ad Library API,
+            fetched via MCP enrichment in local development mode. It reflects the true library total.
           </p>
-          <p className="text-[9px] text-gray-400 mt-1.5">
-            Source: {COUNT_SOURCE_LABELS[ads.countSource] ?? ads.countSource}
-            {ads.countUpdatedAt && (
-              <> · Updated {new Date(ads.countUpdatedAt).toLocaleDateString()}</>
-            )}
+          <p className="text-[10px] text-indigo-600 leading-relaxed">
+            <strong>Sampled Creatives</strong> are the top-{ads.sampledAdsCount} ads by impression rank,
+            collected via Apify and used for all creative analysis (format, copy, landing pages, AI summary).
           </p>
-          {!hasEstimate && ads.sampledAdsCount > 0 && (
-            <p className="text-[9px] text-gray-400 mt-1">
-              Sampled creatives: {ads.sampledAdsCount}
-            </p>
-          )}
+          <p className="text-[9px] text-indigo-400 mt-0.5">
+            Creative analysis is based on sampled ads only — not the full library.
+          </p>
         </div>
       )}
     </div>
@@ -76,7 +117,7 @@ export default function BrandPulseTab({ brand }: Props) {
   const vidRatio = videoRatio(creatives);
   const landingPages = topLandingPages(creatives, 5);
 
-  const secondaryMetrics = [
+  const performanceMetrics = [
     { label: "New (20d)", value: newAds > 0 ? String(newAds) : "–", color: "text-emerald-600" },
     { label: "Avg Running", value: avgDays !== null ? `${avgDays}d` : "–", color: "text-amber-600" },
     { label: "Video Ratio", value: vidRatio !== null ? `${vidRatio}%` : "–", color: "text-sky-600" },
@@ -84,22 +125,18 @@ export default function BrandPulseTab({ brand }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* KPI row */}
-      <div className="grid grid-cols-4 gap-2">
-        <ActiveAdsCell ads={ads} />
-        {secondaryMetrics.map((m) => (
+      {/* Ad inventory panel */}
+      <AdCountPanel ads={ads} />
+
+      {/* Performance KPIs */}
+      <div className="grid grid-cols-3 gap-2">
+        {performanceMetrics.map((m) => (
           <div key={m.label} className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 text-center">
             <div className={`text-lg font-bold ${m.color}`}>{m.value}</div>
             <div className="text-[10px] text-gray-400 mt-0.5">{m.label}</div>
           </div>
         ))}
       </div>
-      {/* Sampled creatives footnote — shown when no estimated count */}
-      {ads.countSource !== "mcp_graph_api" && ads.sampledAdsCount > 0 && (
-        <p className="text-[10px] text-gray-400 -mt-1">
-          Sampled creatives: {ads.sampledAdsCount} · Estimated total unavailable
-        </p>
-      )}
 
       {/* AI Summary */}
       {ai.adSummaryBullets.length > 0 && (
@@ -167,7 +204,6 @@ export default function BrandPulseTab({ brand }: Props) {
           </div>
         </div>
       )}
-
     </div>
   );
 }

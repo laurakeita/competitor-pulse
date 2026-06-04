@@ -19,7 +19,7 @@ export function useAnalysis() {
     error: null,
   });
 
-  const analyze = useCallback(async (brands: BrandInput[]) => {
+  const analyze = useCallback(async (brands: BrandInput[], countryCode = "TW") => {
     setState({ stage: "fetching-ads", brands: [], error: null });
 
     const advanceStage = (delay: number, next: AnalysisStage) =>
@@ -34,7 +34,7 @@ export function useAnalysis() {
       const fetchPromise = fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brands }),
+        body: JSON.stringify({ brands, countryCode }),
       });
 
       const [, res] = await Promise.all([stagePromise, fetchPromise]);
