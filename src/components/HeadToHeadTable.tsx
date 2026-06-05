@@ -17,7 +17,7 @@ interface RowDef {
 
 const ROWS: RowDef[] = [
   { label: "Active Ads", getValue: (b) => fmtNum(b.ads.metrics?.estimatedActiveAdsCount ?? null), getNum: (b) => b.ads.metrics?.estimatedActiveAdsCount ?? null, highlight: "high" },
-  { label: "New Ads (20d)", getValue: (b) => fmtNum(b.ads.metrics?.newAds20d ?? null), getNum: (b) => b.ads.metrics?.newAds20d ?? null, highlight: "high" },
+  { label: "New Ads (10d)", getValue: (b) => fmtNum(b.ads.metrics?.newAds10d ?? null), getNum: (b) => b.ads.metrics?.newAds10d ?? null, highlight: "high" },
   { label: "Avg Running Days", getValue: (b) => { const d = b.ads.metrics?.avgRunningDays ?? null; return d !== null ? `${d}d` : "–"; }, getNum: (b) => b.ads.metrics?.avgRunningDays ?? null, highlight: "high" },
   { label: "Video Ratio", getValue: (b) => { const v = b.ads.metrics?.videoRatio ?? null; return v !== null ? `${v}%` : "–"; }, getNum: (b) => b.ads.metrics?.videoRatio ?? null, highlight: "high" },
   { label: "Creative Tone", getValue: (b) => b.ai.adSentimentTags.slice(0, 2).join(", ") || "–" },
@@ -52,8 +52,9 @@ export default function HeadToHeadTable({ brands }: Props) {
           <tbody>
             {ROWS.map((row, ri) => {
               const nums = row.getNum ? brands.map((b) => row.getNum!(b)) : null;
-              const maxNum = nums ? Math.max(...nums.filter((n) => n !== null) as number[]) : null;
-              const minNum = nums ? Math.min(...nums.filter((n) => n !== null) as number[]) : null;
+              const knownNums = nums?.filter((n): n is number => n !== null) ?? [];
+              const maxNum = knownNums.length > 0 ? Math.max(...knownNums) : null;
+              const minNum = knownNums.length > 0 ? Math.min(...knownNums) : null;
 
               return (
                 <tr key={ri} className={`border-b border-gray-100 ${ri % 2 === 0 ? "bg-white" : "bg-gray-50/30"}`}>

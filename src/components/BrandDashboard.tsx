@@ -5,12 +5,10 @@ import Image from "next/image";
 import type { BrandData } from "@/lib/types";
 import BrandPulseTab from "@/components/tabs/BrandPulseTab";
 import CreativeMomentumTab from "@/components/tabs/CreativeMomentumTab";
-import AdTimelineTab from "@/components/tabs/AdTimelineTab";
 
 const TABS = [
   { id: "pulse", label: "Brand Pulse" },
   { id: "momentum", label: "Creative Momentum" },
-  { id: "timeline", label: "Ad Timeline" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -37,7 +35,7 @@ function BrandChip({
       }`}
     >
       <span className="w-6 h-6 rounded-full border border-gray-200 overflow-hidden bg-gray-50 relative flex items-center justify-center shrink-0">
-        {logoError ? (
+        {logoError || !brand.logoUrl ? (
           <span className="text-[9px] font-bold text-gray-400">{initials}</span>
         ) : (
           <Image
@@ -101,7 +99,6 @@ export default function BrandDashboard({ brands }: Props) {
       <div className="p-4">
         {activeTab === "pulse" && <BrandPulseTab brand={brand} />}
         {activeTab === "momentum" && <CreativeMomentumTab brand={brand} />}
-        {activeTab === "timeline" && <AdTimelineTab brand={brand} />}
       </div>
     </div>
   );

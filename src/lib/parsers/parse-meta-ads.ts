@@ -164,15 +164,12 @@ export function parseMetaAds(domain: string, brandName: string, markdown: string
     metrics: parsedTotal !== null
       ? {
           estimatedActiveAdsCount: parsedTotal,
-          countSource: "mcp_graph_api" as const,
+          country: null,
+          countSource: "apify_sample" as const,
           countUpdatedAt: new Date().toISOString(),
-          newAds20d: null,
+          newAds10d: null,
           avgRunningDays: null,
           videoRatio: null,
-          weeklyLaunches: [],
-          currentWeekLaunches: null,
-          fourWeekAvgLaunches: null,
-          burstStatus: null,
         }
       : null,
     sampledAdsCount: creatives.length,

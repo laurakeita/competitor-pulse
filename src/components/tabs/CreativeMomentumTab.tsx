@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { BrandData, AdCreative } from "@/lib/types";
-import { runningDays, formatLabel } from "@/lib/ad-utils";
+import { runningDays, formatLabel, topHooks, topCTAs } from "@/lib/ad-utils";
 
 const PLATFORM_ICONS: Record<string, string> = {
   facebook: "fb",
@@ -161,14 +161,12 @@ export default function CreativeMomentumTab({ brand }: Props) {
     return db - da;
   });
 
-  const newLast20 = creatives.filter((c) => {
-    const d = runningDays(c.startDate);
-    return d !== null && d <= 20;
-  });
-
   const formatCounts: Record<string, number> = { video: 0, image: 0, carousel: 0, unknown: 0 };
   for (const c of creatives) formatCounts[c.format]++;
   const total = creatives.length;
+
+  const hooks = topHooks(creatives, 5);
+  const ctas = topCTAs(creatives, 5);
 
   const copyCounts = new Map<string, number>();
   for (const c of creatives) {
@@ -181,11 +179,7 @@ export default function CreativeMomentumTab({ brand }: Props) {
   return (
     <div className="space-y-3">
       {/* Sample stats */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 text-center">
-          <div className="text-lg font-bold text-emerald-600">{newLast20.length}</div>
-          <div className="text-[10px] text-gray-400">Launched (20d)</div>
-        </div>
+      <div className="grid grid-cols-2 gap-2">
         <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 text-center">
           <div className="text-lg font-bold text-gray-800">{creatives.length}</div>
           <div className="text-[10px] text-gray-400">Sample Size</div>
@@ -199,7 +193,10 @@ export default function CreativeMomentumTab({ brand }: Props) {
       {/* Format breakdown */}
       {total > 0 && (
         <div className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-1.5">
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider">Format Breakdown</p>
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider">Format Breakdown</p>
+            <span className="text-[9px] text-gray-300 border border-gray-100 rounded px-1.5 py-0.5">Apify</span>
+          </div>
           <div className="space-y-1.5">
             {(["video", "image", "carousel", "unknown"] as const).map((fmt) => {
               const count = formatCounts[fmt];
@@ -220,6 +217,52 @@ export default function CreativeMomentumTab({ brand }: Props) {
           </div>
         </div>
       )}
+
+      {/* Top Hooks */}
+      <div className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">Top Hooks</p>
+          <span className="text-[9px] text-gray-300 border border-gray-100 rounded px-1.5 py-0.5">Apify</span>
+        </div>
+        {hooks.length > 0 ? (
+          <div className="space-y-1.5">
+            {hooks.map(({ text, count }, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="text-[10px] text-gray-300 w-3 shrink-0 pt-px">{i + 1}.</span>
+                <span className="text-xs text-gray-700 flex-1 leading-relaxed line-clamp-2">{text}</span>
+                {count > 1 && (
+                  <span className="text-[10px] text-gray-400 shrink-0">{count}x</span>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 italic">No copy available</p>
+        )}
+      </div>
+
+      {/* Top CTAs */}
+      <div className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wider">Top CTAs</p>
+          <span className="text-[9px] text-gray-300 border border-gray-100 rounded px-1.5 py-0.5">Apify</span>
+        </div>
+        {ctas.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {ctas.map(({ text, count }) => (
+              <span
+                key={text}
+                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700"
+              >
+                {text}
+                <span className="text-[10px] text-indigo-400">{count}</span>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 italic">No CTAs detected</p>
+        )}
+      </div>
 
       {/* Ad Lifespan Gantt */}
       <div className="rounded-lg border border-gray-200 bg-white p-2.5 space-y-1.5">

@@ -2,33 +2,31 @@
  * Development-only enrichment script.
  *
  * Makes two MCP calls per brand:
- *   1. limit=1 → estimated_total_count (Ad Inventory)
- *   2. limit=50, sort=creation_time_desc → recency sample for Brand Pulse KPIs + Ad Timeline
+ *   1. limit=1, countries=[country] → estimated_total_count (country-filtered Ad Inventory)
+ *   2. limit=50, sort=creation_time_desc → recency sample for Brand Pulse KPIs
  *
  * Usage:
  *   npx tsx scripts/enrich-meta-counts.ts
- *   npx tsx scripts/enrich-meta-counts.ts --pageId 15087023444 --brand Nike
+ *   npx tsx scripts/enrich-meta-counts.ts --pageId 156514087702491 --brand "Lancôme Taiwan" --country TW
  *
  * Requires FACEBOOK_ACCESS_TOKEN in .env.local (the Claude Code MCP token).
  *
- * Note: The 50-ad MCP cap means high-volume brands (>50 new ads/week) will show
- * all sample ads in the current week. burstStatus will be null when the 4-week
- * average is 0. This is expected — increase the limit or paginate to resolve.
+ * Note: The 50-ad MCP cap means high-volume brands (>50 new ads/10d) will show
+ * all sample ads in the current window. This is expected — no pagination available.
  */
 
 import * as fs from "fs";
 import * as path from "path";
 import * as dotenv from "dotenv";
-import type { WeeklyLaunchData, BurstStatus } from "../src/lib/types";
 
 dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
 
 const METRICS_PATH = path.resolve(__dirname, "../data/enriched-counts.json");
 const MCP_URL = "https://mcp.facebook.com/ads";
 
-const DEFAULT_BRANDS: Array<{ pageId: string; brandName: string }> = [
-  { pageId: "188151501215824", brandName: "Estée Lauder Taiwan" },
-  { pageId: "156514087702491", brandName: "Lancôme Taiwan" },
+const DEFAULT_BRANDS: Array<{ pageId: string; brandName: string; country: string }> = [
+  { pageId: "188151501215824", brandName: "Estée Lauder Taiwan", country: "TW" },
+  { pageId: "156514087702491", brandName: "Lancôme Taiwan", country: "TW" },
 ];
 
 interface McpToolResult {
@@ -38,7 +36,6 @@ interface McpToolResult {
 
 interface AdItem {
   ad_delivery_start_time?: number | null;
-  /** Some MCP responses include media_type or creative_type for format detection */
   media_type?: string | null;
   creative_type?: string | null;
 }
@@ -129,35 +126,22 @@ function todayMidnight(): Date {
 }
 
 function computeMetrics(ads: AdItem[]): {
-  newAds20d: number | null;
+  newAds10d: number | null;
   avgRunningDays: number | null;
   videoRatio: number | null;
-  weeklyLaunches: WeeklyLaunchData[];
-  currentWeekLaunches: number | null;
-  fourWeekAvgLaunches: number | null;
-  burstStatus: BurstStatus | null;
 } {
   const now = todayMidnight();
   const msPerDay = 86_400_000;
-  const cutoff20d = new Date(now.getTime() - 20 * msPerDay);
+  const cutoff10d = new Date(now.getTime() - 10 * msPerDay);
 
   if (ads.length === 0) {
-    return {
-      newAds20d: null,
-      avgRunningDays: null,
-      videoRatio: null,
-      weeklyLaunches: [],
-      currentWeekLaunches: null,
-      fourWeekAvgLaunches: null,
-      burstStatus: null,
-    };
+    return { newAds10d: null, avgRunningDays: null, videoRatio: null };
   }
 
-  let newAds20d = 0;
+  let newAds10d = 0;
   const runningDays: number[] = [];
   let videoCount = 0;
   let formatKnown = 0;
-  const weekCounts: number[] = Array(8).fill(0);
 
   for (const ad of ads) {
     const ts = ad.ad_delivery_start_time;
@@ -169,14 +153,9 @@ function computeMetrics(ads: AdItem[]): {
     const startDate = new Date(startMs);
     const days = Math.max(0, Math.floor((now.getTime() - startDate.getTime()) / msPerDay));
 
-    if (startDate >= cutoff20d) newAds20d++;
+    if (startDate >= cutoff10d) newAds10d++;
     runningDays.push(days);
 
-    // week bucket: 0 = this week, 1 = last week, ..., 7 = oldest
-    const weekIdx = Math.min(7, Math.floor(days / 7));
-    weekCounts[weekIdx]++;
-
-    // Format detection — field names vary by MCP version
     const fmt = (ad.media_type ?? ad.creative_type ?? "").toUpperCase();
     if (fmt) {
       formatKnown++;
@@ -191,39 +170,7 @@ function computeMetrics(ads: AdItem[]): {
 
   const videoRatio = formatKnown > 0 ? Math.round((videoCount / formatKnown) * 100) : null;
 
-  // Build weekly launch array oldest→newest (chart left→right)
-  const weeklyLaunches: WeeklyLaunchData[] = Array.from({ length: 8 }, (_, w) => {
-    const daysAgo = (7 - w) * 7;
-    const date = new Date(now.getTime() - daysAgo * msPerDay);
-    return {
-      label: `${date.toLocaleString("en", { month: "short" })} ${date.getDate()}`,
-      weekStart: date.toISOString().split("T")[0],
-      count: weekCounts[7 - w], // weekCounts[7] = oldest, weekCounts[0] = this week
-    };
-  });
-
-  const currentWeekLaunches = weekCounts[0];
-  const prevFour = [weekCounts[1], weekCounts[2], weekCounts[3], weekCounts[4]];
-  const fourWeekAvgLaunches = Math.round(prevFour.reduce((a, b) => a + b, 0) / 4);
-
-  let burstStatus: BurstStatus | null = null;
-  if (fourWeekAvgLaunches > 0) {
-    const ratio = currentWeekLaunches / fourWeekAvgLaunches;
-    if (ratio >= 2) burstStatus = "Surge";
-    else if (ratio >= 1.3) burstStatus = "Accelerating";
-    else if (ratio >= 0.7) burstStatus = "Steady";
-    else burstStatus = "Slowing";
-  }
-
-  return {
-    newAds20d,
-    avgRunningDays,
-    videoRatio,
-    weeklyLaunches,
-    currentWeekLaunches,
-    fourWeekAvgLaunches,
-    burstStatus,
-  };
+  return { newAds10d, avgRunningDays, videoRatio };
 }
 
 function loadMetrics(): Record<string, unknown> {
@@ -239,31 +186,36 @@ function saveMetrics(metrics: Record<string, unknown>): void {
   fs.writeFileSync(METRICS_PATH, JSON.stringify(metrics, null, 2) + "\n");
 }
 
-function parseCLIArgs(): { pageId: string; brandName: string } | null {
+function parseCLIArgs(): { pageId: string; brandName: string; country: string } | null {
   const args = process.argv.slice(2);
   const pageIdx = args.indexOf("--pageId");
   const brandIdx = args.indexOf("--brand");
+  const countryIdx = args.indexOf("--country");
   if (pageIdx !== -1 && args[pageIdx + 1]) {
     return {
       pageId: args[pageIdx + 1],
       brandName: brandIdx !== -1 && args[brandIdx + 1] ? args[brandIdx + 1] : args[pageIdx + 1],
+      country: countryIdx !== -1 && args[countryIdx + 1] ? args[countryIdx + 1].toUpperCase() : "TW",
     };
   }
   return null;
 }
 
 async function enrichBrand(
-  brand: { pageId: string; brandName: string },
+  brand: { pageId: string; brandName: string; country: string },
   token: string,
   stored: Record<string, unknown>
 ): Promise<void> {
-  process.stdout.write(`  ${brand.brandName} (${brand.pageId})\n`);
+  process.stdout.write(`  ${brand.brandName} (${brand.pageId}) [${brand.country}]\n`);
 
-  // Call 1: estimated_total_count
-  process.stdout.write(`    [1/2] Fetching estimated total count ... `);
+  // Call 1: country-filtered estimated_total_count
+  process.stdout.write(`    [1/2] Fetching estimated total count (${brand.country}) ... `);
   let estimatedCount: number | null = null;
   try {
-    const countRes = await callMcp(brand.pageId, token, { limit: 1 });
+    const countRes = await callMcp(brand.pageId, token, {
+      limit: 1,
+      countries: [brand.country],
+    });
     estimatedCount = countRes?.estimated_total_count ?? null;
     if (estimatedCount !== null) {
       console.log(`✅  ${estimatedCount.toLocaleString()} active ads`);
@@ -274,33 +226,29 @@ async function enrichBrand(
     console.log(`❌  ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  // Call 2: recency-sorted sample for KPIs + timeline
-  process.stdout.write(`    [2/2] Fetching recency sample (limit=50) ... `);
-  let derivedMetrics: ReturnType<typeof computeMetrics> = {
-    newAds20d: null,
-    avgRunningDays: null,
-    videoRatio: null,
-    weeklyLaunches: [],
-    currentWeekLaunches: null,
-    fourWeekAvgLaunches: null,
-    burstStatus: null,
-  };
+  // Call 2: country-filtered recency sample for KPIs
+  process.stdout.write(`    [2/2] Fetching recency sample (${brand.country}, limit=50) ... `);
+  let derivedMetrics = { newAds10d: null as number | null, avgRunningDays: null as number | null, videoRatio: null as number | null };
   try {
     const recencyRes = await callMcp(brand.pageId, token, {
       limit: 50,
+      countries: [brand.country],
       sort_data: "creation_time_desc",
     });
     const ads: AdItem[] = recencyRes?.ads ?? recencyRes?.data ?? [];
     derivedMetrics = computeMetrics(ads);
     console.log(
-      `✅  ${ads.length} ads · new20d=${derivedMetrics.newAds20d} · burst=${derivedMetrics.burstStatus ?? "n/a"}`
+      `✅  ${ads.length} ads · new10d=${derivedMetrics.newAds10d}`
     );
   } catch (err) {
     console.log(`❌  ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  stored[brand.pageId] = {
+  // Store under country-specific key
+  const key = `${brand.pageId}_${brand.country}`;
+  stored[key] = {
     pageId: brand.pageId,
+    country: brand.country,
     brandName: brand.brandName,
     estimatedActiveAdsCount: estimatedCount,
     countSource: "mcp_graph_api",

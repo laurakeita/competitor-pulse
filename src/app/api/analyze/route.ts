@@ -45,8 +45,19 @@ export async function POST(req: NextRequest) {
     const enrichedResults = adResults.map((result, i) => {
       if (result.status !== "fulfilled") return result;
       const pageId = inputs[i].pageId;
-      if (!pageId) return result;
-      return { status: "fulfilled" as const, value: mergeMetrics(pageId, result.value) };
+      let merged = pageId ? mergeMetrics(pageId, countryCode, result.value) : result.value;
+
+      // Compute videoRatio from Apify creatives — MCP ads_library_search does not return
+      // media_type / creative_type, so we derive it from the Apify snapshot.videos detection.
+      if (merged.metrics) {
+        const creatives = merged.creatives;
+        const knownFmt = creatives.filter((c) => c.format !== "unknown").length;
+        const videoCnt = creatives.filter((c) => c.format === "video").length;
+        const videoRatio = knownFmt > 0 ? Math.round((videoCnt / knownFmt) * 100) : null;
+        merged = { ...merged, metrics: { ...merged.metrics, videoRatio } };
+      }
+
+      return { status: "fulfilled" as const, value: merged };
     });
 
     const rawBrands = inputs.map((resolved, i) =>

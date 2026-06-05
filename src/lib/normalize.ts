@@ -43,7 +43,7 @@ export function normalizeBrandData(
 
   const logoUrl = primaryDomain
     ? `https://logo.clearbit.com/${primaryDomain}`
-    : "";
+    : null;
 
   return {
     id: resolved.pageId ?? resolved.handle,

@@ -18,26 +18,6 @@ export function runningDays(startDate: string | null): number | null {
   return Math.max(0, Math.floor((today().getTime() - d.getTime()) / 86400000));
 }
 
-export function avgRunningDays(creatives: AdCreative[]): number | null {
-  const days = creatives.map((c) => runningDays(c.startDate)).filter((d): d is number => d !== null);
-  if (days.length === 0) return null;
-  return Math.round(days.reduce((a, b) => a + b, 0) / days.length);
-}
-
-export function newAdsLast20Days(creatives: AdCreative[]): number {
-  const cutoff = new Date(today().getTime() - 20 * 86400000);
-  return creatives.filter((c) => {
-    const d = parseDate(c.startDate);
-    return d !== null && d >= cutoff;
-  }).length;
-}
-
-export function videoRatio(creatives: AdCreative[]): number | null {
-  if (creatives.length === 0) return null;
-  const videos = creatives.filter((c) => c.format === "video").length;
-  return Math.round((videos / creatives.length) * 100);
-}
-
 export function topLandingPages(creatives: AdCreative[], limit = 5): { url: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const c of creatives) {
@@ -56,46 +36,63 @@ export function topLandingPages(creatives: AdCreative[], limit = 5): { url: stri
     .map(([url, count]) => ({ url, count }));
 }
 
-export function computeBurstScore(creatives: AdCreative[]): number | null {
-  if (creatives.length === 0) return null;
-
-  // Group by week bucket (days ago / 7, integer)
-  const weekCounts: number[] = Array(5).fill(0);
+// Top Hooks — first meaningful line of each ad copy, ranked by frequency
+export function topHooks(creatives: AdCreative[], limit = 5): { text: string; count: number }[] {
+  const counts = new Map<string, { original: string; count: number }>();
   for (const c of creatives) {
-    const d = runningDays(c.startDate);
-    if (d === null) continue;
-    const weekIdx = Math.floor(d / 7); // 0 = this week, 1 = last week, ...
-    if (weekIdx < 5) weekCounts[weekIdx]++;
+    if (!c.adCopy) continue;
+    const firstLine = c.adCopy
+      .split(/\n/)
+      .map((l) => l.trim())
+      .find((l) => l.length >= 8);
+    if (!firstLine) continue;
+    const key = firstLine.toLowerCase().replace(/\s+/g, " ").slice(0, 80);
+    const existing = counts.get(key);
+    if (existing) existing.count++;
+    else counts.set(key, { original: firstLine, count: 1 });
   }
-
-  const currentWeek = weekCounts[0];
-  const prevWeeks = weekCounts.slice(1, 5);
-  const prevCount = prevWeeks.filter((n) => n > 0).length;
-  if (prevCount === 0) return null;
-
-  const prevAvg = prevWeeks.reduce((a, b) => a + b, 0) / 4;
-  if (prevAvg === 0) return null;
-
-  return Math.round((currentWeek / prevAvg) * 10) / 10;
+  return [...counts.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map(({ original, count }) => ({ text: original, count }));
 }
 
-export function weeklyLaunches(creatives: AdCreative[], weeks = 8): { label: string; count: number }[] {
-  const result: { label: string; count: number }[] = [];
-  const now = today();
-  for (let w = weeks - 1; w >= 0; w--) {
-    const start = w * 7;
-    const end = start + 7;
-    const count = creatives.filter((c) => {
-      const d = runningDays(c.startDate);
-      return d !== null && d >= start && d < end;
-    }).length;
-    const date = new Date(now.getTime() - (w * 7 + 3) * 86400000);
-    result.push({
-      label: `${date.toLocaleString("en", { month: "short" })} ${date.getDate()}`,
-      count,
-    });
+// CTA phrase list — English + Traditional Chinese
+const CTA_LIST = [
+  "Shop Now", "Learn More", "Get Started", "Sign Up", "Buy Now",
+  "Discover", "Explore", "Order Now", "Try Now", "Try for Free",
+  "Start Now", "Join Now", "Book Now", "See More", "View More",
+  "Find Out More", "Download Now", "Get Offer", "Claim Now", "Subscribe",
+  "Apply Now", "Register Now", "Save Now", "Check It Out", "Shop the Sale",
+  "立即購買", "了解更多", "立即訂購", "免費試用", "馬上購買",
+  "立即體驗", "搶先購買", "前往選購", "現在購買", "查看更多",
+  "立即下單", "限時優惠", "免費領取", "立即申請", "立即報名",
+  "立即領取", "前往購買", "立即搶購", "點此了解", "免費體驗",
+] as const;
+
+// Top CTAs — counts how many ads contain each CTA phrase
+export function topCTAs(creatives: AdCreative[], limit = 5): { text: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const c of creatives) {
+    if (!c.adCopy) continue;
+    const copy = c.adCopy;
+    const seen = new Set<string>();
+    for (const cta of CTA_LIST) {
+      if (seen.has(cta)) continue;
+      const isEnglish = /[a-zA-Z]/.test(cta);
+      const found = isEnglish
+        ? new RegExp(`\\b${cta}\\b`, "i").test(copy)
+        : copy.includes(cta);
+      if (found) {
+        counts.set(cta, (counts.get(cta) ?? 0) + 1);
+        seen.add(cta);
+      }
+    }
   }
-  return result;
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([text, count]) => ({ text, count }));
 }
 
 export function formatLabel(format: AdCreative["format"]): string {

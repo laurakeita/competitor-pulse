@@ -1,67 +1,46 @@
 {
-  "188151501215824": {
+  "188151501215824_TW": {
     "pageId": "188151501215824",
+    "country": "TW",
     "brandName": "Estée Lauder Taiwan",
-    "estimatedActiveAdsCount": 28,
+    "estimatedActiveAdsCount": 15,
     "countSource": "mcp_graph_api",
     "countUpdatedAt": "2026-06-05T00:00:00.000Z",
-    "newAds20d": null,
-    "avgRunningDays": null,
-    "videoRatio": null,
-    "weeklyLaunches": [],
-    "currentWeekLaunches": null,
-    "fourWeekAvgLaunches": null,
-    "burstStatus": null
+    "newAds10d": 15,
+    "avgRunningDays": 3,
+    "videoRatio": null
   },
-  "156514087702491": {
+  "156514087702491_TW": {
     "pageId": "156514087702491",
+    "country": "TW",
     "brandName": "Lancôme Taiwan",
-    "estimatedActiveAdsCount": 861,
+    "estimatedActiveAdsCount": 142,
     "countSource": "mcp_graph_api",
     "countUpdatedAt": "2026-06-05T00:00:00.000Z",
-    "newAds20d": null,
-    "avgRunningDays": null,
-    "videoRatio": null,
-    "weeklyLaunches": [],
-    "currentWeekLaunches": null,
-    "fourWeekAvgLaunches": null,
-    "burstStatus": null
+    "newAds10d": 50,
+    "avgRunningDays": 1,
+    "videoRatio": null
   },
   "15087023444": {
     "pageId": "15087023444",
+    "country": null,
     "brandName": "Nike",
     "estimatedActiveAdsCount": 1975,
     "countSource": "mcp_graph_api",
     "countUpdatedAt": "2026-06-04T00:00:00.000Z",
-    "newAds20d": 48,
+    "newAds10d": 48,
     "avgRunningDays": 2,
-    "videoRatio": null,
-    "weeklyLaunches": [
-      { "label": "Apr 15", "weekStart": "2026-04-15", "count": 0 },
-      { "label": "Apr 22", "weekStart": "2026-04-22", "count": 0 },
-      { "label": "Apr 29", "weekStart": "2026-04-29", "count": 0 },
-      { "label": "May 6",  "weekStart": "2026-05-06", "count": 0 },
-      { "label": "May 13", "weekStart": "2026-05-13", "count": 0 },
-      { "label": "May 20", "weekStart": "2026-05-20", "count": 0 },
-      { "label": "May 27", "weekStart": "2026-05-27", "count": 0 },
-      { "label": "Jun 3",  "weekStart": "2026-06-03", "count": 48 }
-    ],
-    "currentWeekLaunches": 48,
-    "fourWeekAvgLaunches": 0,
-    "burstStatus": null
+    "videoRatio": null
   },
   "182162001806727": {
     "pageId": "182162001806727",
+    "country": null,
     "brandName": "Adidas",
     "estimatedActiveAdsCount": 689,
     "countSource": "mcp_graph_api",
     "countUpdatedAt": "2026-06-04T00:00:00.000Z",
-    "newAds20d": null,
+    "newAds10d": null,
     "avgRunningDays": null,
-    "videoRatio": null,
-    "weeklyLaunches": [],
-    "currentWeekLaunches": null,
-    "fourWeekAvgLaunches": null,
-    "burstStatus": null
+    "videoRatio": null
   }
 }

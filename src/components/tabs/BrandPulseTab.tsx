@@ -98,7 +98,7 @@ function AdInventoryPanel({
             <strong>Sampled Creatives</strong> are the top-{sampledAdsCount} ads by impression rank collected via Apify — used for all creative analysis in the Creative Momentum tab.
           </p>
           <p className="text-[9px] text-indigo-400">
-            All KPIs on this tab (New Ads, Avg Running, Video Ratio) are derived from the MCP recency sample, not the Apify impression sample.
+            All KPIs on this tab (New Ads, Avg Running, Video Ratio) are derived from the MCP recency sample (50 most recent active ads), not the Apify impression sample.
           </p>
         </div>
       )}
@@ -116,8 +116,8 @@ export default function BrandPulseTab({ brand }: Props) {
 
   const performanceMetrics = [
     {
-      label: "New (20d)",
-      value: fmtCount(metrics?.newAds20d ?? null),
+      label: "New (10d)",
+      value: fmtCount(metrics?.newAds10d ?? null),
       color: "text-emerald-600",
     },
     {
@@ -177,7 +177,7 @@ export default function BrandPulseTab({ brand }: Props) {
             <p className="text-[10px] text-gray-400 uppercase tracking-wider">Messaging Pillars</p>
             <div className="space-y-1">
               {ai.messagingPillars.map((pillar, i) => (
-                <div key={pillar} className="flex items-center gap-1.5 text-xs text-gray-700">
+                <div key={i} className="flex items-center gap-1.5 text-xs text-gray-700">
                   <span className="text-[10px] text-gray-300 w-3">{i + 1}.</span>
                   {pillar}
                 </div>
