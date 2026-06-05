@@ -64,19 +64,19 @@ async function main() {
   console.log("Screenshotting Brand Pulse...");
   await page.getByRole("button", { name: /brand pulse/i }).first().click();
   await page.waitForTimeout(400);
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.waitForTimeout(200);
+
+  // Expand viewport tall enough to render all content without scrolling
+  await page.setViewportSize({ width: 1280, height: 4000 });
+  await page.waitForTimeout(300);
 
   const dcBox = await dashCard.boundingBox();
   const hhBox = await headToHead.boundingBox().catch(() => null);
 
   if (dcBox) {
-    const bottom = hhBox
-      ? hhBox.y + hhBox.height + 20
-      : dcBox.y + dcBox.height + 20;
+    const bottom = hhBox ? hhBox.y + hhBox.height : dcBox.y + dcBox.height;
     await page.screenshot({
       path: path.join(OUT_DIR, "brand-pulse.png"),
-      clip: { x: dcBox.x - 8, y: dcBox.y - 8, width: dcBox.width + 16, height: bottom - dcBox.y + 16 },
+      clip: { x: dcBox.x - 8, y: dcBox.y - 8, width: dcBox.width + 16, height: bottom - dcBox.y + 24 },
     });
   } else {
     await dashCard.screenshot({ path: path.join(OUT_DIR, "brand-pulse.png") });
@@ -87,15 +87,20 @@ async function main() {
   console.log("Screenshotting Creative Momentum...");
   await page.getByRole("button", { name: /creative momentum/i }).first().click();
   await page.waitForTimeout(400);
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.waitForTimeout(200);
 
   const dcBox2 = await dashCard.boundingBox();
+  // Stop before the Ad Survival Ranking card list — the Gantt + Hooks + CTAs
+  // are the readable highlights; 15 ad cards are too small to read in a README image.
+  const survivalSection = page.locator("text=Ad Survival Ranking").first();
+  const survivalBox = await survivalSection.boundingBox().catch(() => null);
+
   if (dcBox2) {
-    // Show top ~900px of the creative tab (Format, Hooks, CTAs)
+    const cropBottom = survivalBox
+      ? survivalBox.y - 16          // stop just above the ranking heading
+      : dcBox2.y + dcBox2.height;   // fallback: full card
     await page.screenshot({
       path: path.join(OUT_DIR, "creative-momentum.png"),
-      clip: { x: dcBox2.x - 8, y: dcBox2.y - 8, width: dcBox2.width + 16, height: 900 },
+      clip: { x: dcBox2.x - 8, y: dcBox2.y - 8, width: dcBox2.width + 16, height: cropBottom - dcBox2.y + 16 },
     });
   } else {
     await dashCard.screenshot({ path: path.join(OUT_DIR, "creative-momentum.png") });
