@@ -20,27 +20,5 @@
     "newAds10d": 50,
     "avgRunningDays": 1,
     "videoRatio": null
-  },
-  "15087023444": {
-    "pageId": "15087023444",
-    "country": null,
-    "brandName": "Nike",
-    "estimatedActiveAdsCount": 1975,
-    "countSource": "mcp_graph_api",
-    "countUpdatedAt": "2026-06-04T00:00:00.000Z",
-    "newAds10d": 48,
-    "avgRunningDays": 2,
-    "videoRatio": null
-  },
-  "182162001806727": {
-    "pageId": "182162001806727",
-    "country": null,
-    "brandName": "Adidas",
-    "estimatedActiveAdsCount": 689,
-    "countSource": "mcp_graph_api",
-    "countUpdatedAt": "2026-06-04T00:00:00.000Z",
-    "newAds10d": null,
-    "avgRunningDays": null,
-    "videoRatio": null
   }
 }

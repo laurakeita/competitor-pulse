@@ -56,7 +56,10 @@ Answers the inventory question: how aggressively is this brand advertising right
 | How long are ads staying active on average? | Avg Running Days |
 | What share of their ads use video? | Video Ratio |
 
-All four metrics are sourced from Meta's Graph API via MCP enrichment — not inferred from a creative sample.
+Metrics come from two MCP calls, both country-filtered, stored at dev-time via `npm run enrich`:
+
+- **Active Ads Estimate** — true full-inventory count from `estimated_total_count`
+- **New Ads (10d), Avg Running Days, Video Ratio** — derived from the 50 most recently created active ads (recency sample). These are sample-based approximations, not full-inventory figures.
 
 The tab also surfaces AI-generated insights from Gemini Flash: messaging pillars, creative tone, and a summary of the brand's advertising angle.
 
@@ -99,10 +102,10 @@ All Creative Momentum metrics are derived from the Apify creative sample — the
 
 ### Video Ratio
 
-- **Definition:** Percentage of ads in the MCP recency sample that are video format
-- **Source:** MCP recency sample (`media_type` / `creative_type` field)
+- **Definition:** Percentage of ads in the Apify creative sample that are video format
+- **Source:** Apify — `snapshot.videos` array; format detected per creative at runtime
 - **Formula:** `video_count / ads_with_known_format × 100`
-- **Note:** Returns null if no format data is available in the MCP response
+- **Note:** Returns null if the sample contains no ads with detectable format. MCP does not return format fields, so this metric is computed from the Apify sample even though it appears alongside MCP-sourced KPIs.
 
 ### Sample Size
 

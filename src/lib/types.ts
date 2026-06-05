@@ -12,8 +12,12 @@ export interface AdCreative {
 }
 
 /**
- * All inventory metrics sourced from MCP / Graph API (country-filtered).
- * Stored at dev-time via `npm run enrich`; never computed from the Apify sample.
+ * Metrics from two country-filtered MCP calls, stored at dev-time via `npm run enrich`.
+ *
+ * estimatedActiveAdsCount — true full-inventory count (limit=1, reads estimated_total_count).
+ * newAds10d / avgRunningDays / videoRatio — derived from the 50-ad recency sample
+ *   (limit=50, sort=creation_time_desc). These are sample-based approximations,
+ *   not full-inventory figures.
  */
 export interface BrandMetrics {
   estimatedActiveAdsCount: number | null;
