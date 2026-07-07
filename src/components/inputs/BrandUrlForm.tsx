@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { BrandInput } from "@/lib/types";
-import { parseFacebookUrl } from "@/lib/resolvers/resolve-page";
 
 const COUNTRIES = [
   { code: "TW", label: "Taiwan (TW)" },

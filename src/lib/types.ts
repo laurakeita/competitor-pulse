@@ -8,7 +8,7 @@ export interface AdCreative {
   landingPage: string | null;
   format: "video" | "image" | "carousel" | "unknown";
   platforms: string[];
-  dataSource: "firecrawl" | "apify" | "mock";
+  dataSource: "apify" | "mock";
 }
 
 /**
@@ -41,7 +41,7 @@ export interface AdData {
   /** Number of creatives in the Apify impression-ranked sample */
   sampledAdsCount: number;
   creatives: AdCreative[];
-  dataSource: "firecrawl" | "apify" | "mock";
+  dataSource: "apify" | "mock";
 }
 
 export interface AiAnalysis {

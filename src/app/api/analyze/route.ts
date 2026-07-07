@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import type { AnalyzeRequest, AnalyzeResponse } from "@/lib/types";
+import type { AnalyzeRequest, AnalyzeResponse, BrandData, BrandMetrics } from "@/lib/types";
 import { resolveBrand } from "@/lib/resolvers/resolve-page";
 import { scrapeApifyMetaAds } from "@/lib/scrapers/apify-meta-ads";
 import { normalizeBrandData } from "@/lib/normalize";
@@ -10,6 +10,26 @@ import { generateMockData } from "@/lib/mock-data";
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 const USE_APIFY = Boolean(process.env.APIFY_API_TOKEN);
 const DEFAULT_COUNTRY = "TW";
+
+// Per-instance cache so repeat analyses of the same brand skip the Apify run
+// (~$0.04 and 30–300s each) and the Gemini call. Only fully-analyzed brands
+// are cached; mock fallbacks are not, so a failed scrape retries next time.
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const brandCache = new Map<string, { brand: BrandData; cachedAt: number }>();
+
+function cacheKey(handle: string, countryCode: string): string {
+  return `${handle.toLowerCase()}|${countryCode}`;
+}
+
+function getCachedBrand(key: string): BrandData | null {
+  const hit = brandCache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.cachedAt > CACHE_TTL_MS) {
+    brandCache.delete(key);
+    return null;
+  }
+  return hit.brand;
+}
 
 export async function POST(req: NextRequest) {
   const start = Date.now();
@@ -37,46 +57,75 @@ export async function POST(req: NextRequest) {
 
     const countryCode = (body.countryCode ?? DEFAULT_COUNTRY).toUpperCase().slice(0, 2);
 
-    const adResults = await Promise.allSettled(
-      inputs.map((b) => scrapeApifyMetaAds(b.brandName, b.pageUrl, countryCode))
-    );
+    const cached = inputs.map((b) => getCachedBrand(cacheKey(b.handle, countryCode)));
+    const misses = inputs.filter((_, i) => cached[i] === null);
 
-    // Enrich with MCP-sourced metrics (uses pageId; skipped if handle not in cache)
-    const enrichedResults = adResults.map((result, i) => {
-      if (result.status !== "fulfilled") return result;
-      const pageId = inputs[i].pageId;
-      let merged = pageId ? mergeMetrics(pageId, countryCode, result.value) : result.value;
+    let freshBrands: BrandData[] = [];
+    if (misses.length > 0) {
+      const adResults = await Promise.allSettled(
+        misses.map((b) => scrapeApifyMetaAds(b.brandName, b.pageUrl, countryCode))
+      );
 
-      // Compute videoRatio from Apify creatives — MCP ads_library_search does not return
-      // media_type / creative_type, so we derive it from the Apify snapshot.videos detection.
-      if (merged.metrics) {
-        const creatives = merged.creatives;
+      // Enrich with MCP-sourced metrics (uses pageId; skipped if handle not in cache)
+      const enrichedResults = adResults.map((result, i) => {
+        if (result.status !== "fulfilled") return result;
+        const pageId = misses[i].pageId;
+        const withMcp = pageId ? mergeMetrics(pageId, countryCode, result.value) : result.value;
+
+        // videoRatio is Apify-derived (MCP ads_library_search returns no
+        // media_type / creative_type), so compute it whether or not this
+        // brand has MCP metrics from `npm run enrich`.
+        const creatives = withMcp.creatives;
         const knownFmt = creatives.filter((c) => c.format !== "unknown").length;
         const videoCnt = creatives.filter((c) => c.format === "video").length;
         const videoRatio = knownFmt > 0 ? Math.round((videoCnt / knownFmt) * 100) : null;
-        merged = { ...merged, metrics: { ...merged.metrics, videoRatio } };
+
+        const metrics: BrandMetrics = withMcp.metrics
+          ? { ...withMcp.metrics, videoRatio }
+          : {
+              estimatedActiveAdsCount: null,
+              country: countryCode,
+              countSource: "unavailable",
+              countUpdatedAt: null,
+              newAds10d: null,
+              avgRunningDays: null,
+              videoRatio,
+            };
+
+        return { status: "fulfilled" as const, value: { ...withMcp, metrics } };
+      });
+
+      const rawBrands = misses.map((resolved, i) =>
+        normalizeBrandData(resolved, enrichedResults[i])
+      );
+
+      let aiResults;
+      try {
+        aiResults = await claudeAnalyzeAll(rawBrands);
+      } catch (err) {
+        console.error("Gemini analysis failed, using mock AI:", err);
+        aiResults = rawBrands.map((b) => generateMockData(b.id).ai);
       }
 
-      return { status: "fulfilled" as const, value: merged };
-    });
+      freshBrands = rawBrands.map((raw, i) => ({
+        ...raw,
+        ai: aiResults[i],
+        analyzedAt: new Date().toISOString(),
+      }));
 
-    const rawBrands = inputs.map((resolved, i) =>
-      normalizeBrandData(resolved, enrichedResults[i])
-    );
-
-    let aiResults;
-    try {
-      aiResults = await claudeAnalyzeAll(rawBrands);
-    } catch (err) {
-      console.error("Gemini analysis failed, using mock AI:", err);
-      aiResults = rawBrands.map((b) => generateMockData(b.id).ai);
+      freshBrands.forEach((brand, i) => {
+        if (brand.analysisStatus === "complete") {
+          brandCache.set(cacheKey(misses[i].handle, countryCode), {
+            brand,
+            cachedAt: Date.now(),
+          });
+        }
+      });
     }
 
-    const brands = rawBrands.map((raw, i) => ({
-      ...raw,
-      ai: aiResults[i],
-      analyzedAt: new Date().toISOString(),
-    }));
+    // Reassemble in the original request order
+    let freshIdx = 0;
+    const brands = inputs.map((_, i) => cached[i] ?? freshBrands[freshIdx++]);
 
     return Response.json({ brands, durationMs: Date.now() - start } satisfies AnalyzeResponse);
   } catch (err) {

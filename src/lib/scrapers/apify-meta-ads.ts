@@ -111,14 +111,6 @@ function extractPlatforms(item: ApifyAdItem): string[] {
   return ["facebook", "instagram"];
 }
 
-function domainToBrandName(domain: string): string {
-  return domain
-    .replace(/^(www\.)?/, "")
-    .split(".")[0]
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 export async function scrapeApifyMetaAds(
   brandName: string,
   pageUrl: string,

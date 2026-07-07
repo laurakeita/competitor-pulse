@@ -148,9 +148,9 @@ export default function BrandPulseTab({ brand }: Props) {
         ))}
       </div>
 
-      {!metrics && (
+      {(metrics?.estimatedActiveAdsCount ?? null) === null && (
         <p className="text-[10px] text-amber-600 text-center py-1">
-          KPIs unavailable — run <code className="font-mono">npm run enrich</code> to populate MCP metrics
+          MCP KPIs unavailable — run <code className="font-mono">npm run enrich</code> to populate them
         </p>
       )}
 

@@ -3,14 +3,13 @@
 import { useState, useCallback } from "react";
 import type { AnalysisState, AnalysisStage, BrandInput, AnalyzeResponse } from "@/lib/types";
 
-const STAGE_DELAYS: Record<AnalysisStage, number> = {
-  idle: 0,
-  "fetching-ads": 5000,
-  "ai-analysis": 8000,
-  "building-report": 500,
-  complete: 0,
-  error: 0,
-};
+// Cosmetic pacing for the progress checklist while the request is in flight.
+// The fetch result always wins — timers are cleared as soon as it settles,
+// so a fast response (demo mode, cache hit) renders immediately.
+const STAGE_SCHEDULE: { stage: AnalysisStage; atMs: number }[] = [
+  { stage: "ai-analysis", atMs: 5000 },
+  { stage: "building-report", atMs: 13000 },
+];
 
 export function useAnalysis() {
   const [state, setState] = useState<AnalysisState>({
@@ -22,22 +21,16 @@ export function useAnalysis() {
   const analyze = useCallback(async (brands: BrandInput[], countryCode = "TW") => {
     setState({ stage: "fetching-ads", brands: [], error: null });
 
-    const advanceStage = (delay: number, next: AnalysisStage) =>
-      new Promise<void>((r) => setTimeout(() => { setState((s) => ({ ...s, stage: next })); r(); }, delay));
-
-    const stagePromise = (async () => {
-      await advanceStage(STAGE_DELAYS["fetching-ads"], "ai-analysis");
-      await advanceStage(STAGE_DELAYS["ai-analysis"], "building-report");
-    })();
+    const timers = STAGE_SCHEDULE.map(({ stage, atMs }) =>
+      setTimeout(() => setState((s) => ({ ...s, stage })), atMs)
+    );
 
     try {
-      const fetchPromise = fetch("/api/analyze", {
+      const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ brands, countryCode }),
       });
-
-      const [, res] = await Promise.all([stagePromise, fetchPromise]);
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
@@ -52,6 +45,8 @@ export function useAnalysis() {
         brands: [],
         error: err instanceof Error ? err.message : "Unknown error",
       });
+    } finally {
+      timers.forEach(clearTimeout);
     }
   }, []);
 
